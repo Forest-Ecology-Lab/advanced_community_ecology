@@ -43,16 +43,19 @@ p_dat <- structure(list(
 in_list <- unnest(p_dat$content$study, site)
 
 
-# Filter for ITRDB sites #UPDATED to include just Europe###
+# Filter for ITRDB sites #UPDATED to include just Europe and only > 1900 ###
 # If you want to check other Parameters you can check the link:
 # https://www.ncei.noaa.gov/access/paleo-search/study/params.json
 
 itrdb_list <- in_list %>%
-  filter(str_detect(studyName, "ITRDB") &
-           str_detect(locationName, "Continent>Europe")) %>%
-  filter(!str_detect(locationName, "Continent>Europe>Eastern Europe>Russia"))
+  filter(str_detect(studyName, "ITRDB"),
+         str_detect(locationName, "Continent>Europe"),
+         !str_detect(locationName, "Continent>Europe>Eastern Europe>Russia"),
+         earliestYearCE <= 2026,
+         mostRecentYearCE >= 1900,
+         mostRecentYearCE <= 2026)
 
-sort(unique(itrdb_list$locationName))
+range(itrdb_list$earliestYearCE)
 
 # 1. Create ITRDB site metadata table -------------------------------------####
 
@@ -238,3 +241,6 @@ write_csv(itrdb_site_meta,
                     "itrdb_site_metadata.csv"))
 
 future::plan(sequential)
+# --------------------------------------------------------------------------- *
+# --------------------------------------------------------------------------- *
+# --------------------------------------------------------------------------- *

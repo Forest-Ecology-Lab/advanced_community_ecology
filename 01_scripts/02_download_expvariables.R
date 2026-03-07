@@ -120,6 +120,15 @@ download.file(url = "https://ndownloader.figshare.com/files/35133814",
               destfile = file.path(tree_dir, "tree_sp_richness.tif"),
               mode = "wb", method = "libcurl")
 
+## ---- Tree speceis code ----*
+tree_out <- file.path("02_data", "01_tree_data")
+dir.create(tree_out, recursive = TRUE, showWarnings = FALSE)
+
+download.file(url = paste0("https://www.ncei.noaa.gov/pub/data/paleo/",
+                           "templates/tree-species-code.csv"),
+              destfile = file.path(tree_out, "tree-species-code.csv"),
+              mode = "wb", method = "libcurl")
+
 # ---- 03 Ecoregions ----
 
 eco_dir <- file.path("02_data", "02_spatial_data", "03_ecoregions")
@@ -195,10 +204,6 @@ download.file(paste0("https://www.sciencebase.gov/catalog/file/get",
 
 unzip(tmpmount, exdir = mount_out)
 
-tree_out <- file.path("02_data", "01_tree_data")
-dir.create(tree_out, recursive = TRUE, showWarnings = FALSE)
-
-download.file(url = paste0("https://www.ncei.noaa.gov/pub/data/paleo/",
-                           "templates/tree-species-code.csv"),
-              destfile = file.path(tree_out, "tree-species-code.csv"),
-              mode = "wb", method = "libcurl")
+# --------------------------------------------------------------------------- *
+# --------------------------------------------------------------------------- *
+# --------------------------------------------------------------------------- *
