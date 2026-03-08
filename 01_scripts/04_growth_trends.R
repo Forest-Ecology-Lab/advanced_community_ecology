@@ -17,6 +17,7 @@ library(dplR)
 library(dplyr)
 library(tidyr)
 library(tibble)
+library(readr)
 
 # 01 Prepare the data ----
 itrdb_in <- file.path("02_data", "01_tree_data",

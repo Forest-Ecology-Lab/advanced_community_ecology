@@ -15,6 +15,7 @@
 # ---- Load libraries ----
 library(dplyr)
 library(dplR)
+library(readr)
 
 # 01 Prepare the data ----
 itrdb_in <- file.path("02_data", "01_tree_data",
