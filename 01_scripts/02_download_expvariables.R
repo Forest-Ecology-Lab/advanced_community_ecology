@@ -22,6 +22,9 @@ library(terra)
 library(soilDB)
 library(ncdf4)
 
+# Set a Timeout limit
+options(timeout = 7200)
+
 # ---- Define Europe limits ----*
 
 europe_extent <- ext(-10, 35, 35, 75)
@@ -198,9 +201,9 @@ mount_out <- file.path("02_data", "02_spatial_data", "06_mountains")
 dir.create(mount_out, recursive = TRUE, showWarnings = FALSE)
 tmpmount <- tempfile(fileext = ".zip")
 
-download.file(paste0("https://www.sciencebase.gov/catalog/file/get",
-                     "/638fbf72d34ed907bf7d3080?f=__disk__93%2Fcc%",
-                     "2Fb1%2F93ccb1d82335b2b475f4f728bcca635ba355d4eb"),
+download.file(paste0("https://www.sciencebase.gov/catalog/file/get/",
+                     "638fbf72d34ed907bf7d3080?f=__disk__93%2Fcc%2Fb1%",
+                     "2F93ccb1d82335b2b475f4f728bcca635ba355d4eb"),
               destfile = tmpmount,
               mode = "wb", method = "libcurl")
 

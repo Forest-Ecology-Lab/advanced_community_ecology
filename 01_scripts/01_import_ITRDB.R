@@ -10,7 +10,6 @@ library(dplyr)
 library(purrr)
 library(tidyr)
 library(stringr)
-library(readr)
 library(admisc)
 library(lubridate)
 library(future)
@@ -232,13 +231,15 @@ pwalk(list(out_dat$RWL, out_dat$linkText, out_dat$ndec),
 out_meta <- file.path("02_data", "01_tree_data", "01_ITRDB_dendroecology")
                      
 # Save metadata files
-write_csv(itrdb_rawmeas_files,
+write.csv(itrdb_rawmeas_files,
           file.path(out_meta,
-                    "itrdb_raw_measurement_files.csv"))
+                    "itrdb_raw_measurement_files.csv"),
+          row.names = FALSE)
 
-write_csv(itrdb_site_meta,
+write.csv(itrdb_site_meta,
           file.path(out_meta,
-                    "itrdb_site_metadata.csv"))
+                    "itrdb_site_metadata.csv"),
+          row.names = FALSE)
 
 future::plan(sequential)
 # --------------------------------------------------------------------------- *

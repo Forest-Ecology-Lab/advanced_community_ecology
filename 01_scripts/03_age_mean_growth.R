@@ -15,7 +15,6 @@
 # ---- Load libraries ----
 library(dplyr)
 library(dplR)
-library(readr)
 
 # 01 Prepare the data ----
 itrdb_in <- file.path("02_data", "01_tree_data",
@@ -38,14 +37,15 @@ pb <- txtProgressBar(min = 0, max = length(rwl_files), style = 3)
 for (i in seq_along(rwl_files)) {
 
   rwl_path <- rwl_files[i]
-  rwl_name <- gsub("\\.rwl$", "", basename(rwl_path))
+  rwl_name <- tools::file_path_sans_ext(basename(rwl_path))
 
-  setTxtProgressBar(pb, i)
+  if (i %% 20 == 0) setTxtProgressBar(pb, i)
 
   rwl <- tryCatch(
     {
       capture.output(
-        rwl <- read.rwl(rwl_path)
+        rwl <- read.rwl(rwl_path),
+        file = NULL
       )
       rwl
     },
@@ -112,6 +112,9 @@ for (i in seq_along(rwl_files)) {
 
 close(pb)
 
+# Note: Some ITRDB .rwl files do not strictly follow Tucson format.
+# dplR may issue warnings but usually rereads the file successfully.
+
 # 03 Generate the data frames ----
 tree_age <- bind_rows(age_list)
 
@@ -119,8 +122,9 @@ tree_age <- bind_rows(age_list)
 derived_out <- file.path("02_data", "03_derived_data")
 
 # Tree level
-write_csv(x = tree_age,
-          file = file.path(derived_out, "tree_age.csv"))
+write.csv(x = tree_age,
+          file = file.path(derived_out, "tree_age.csv"),
+          row.names = FALSE)
 
 # Site Level
 metadata_age <- tree_age %>%
@@ -133,8 +137,9 @@ metadata_age <- tree_age %>%
             .groups = "drop") %>%
   left_join(metadata, by = "rwl")
 
-write_csv(x = metadata_age,
-          file =  file.path(derived_out, "metadata_age.csv"))
+write.csv(x = metadata_age,
+          file =  file.path(derived_out, "metadata_age.csv"),
+          row.names = FALSE)
 # --------------------------------------------------------------------------- *
 # --------------------------------------------------------------------------- *
 # --------------------------------------------------------------------------- *

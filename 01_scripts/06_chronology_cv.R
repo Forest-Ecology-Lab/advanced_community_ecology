@@ -13,7 +13,6 @@
 
 # ---- Load libraries ---- *
 library(dplyr)
-library(readr)
 
 # ---- 01 Prepare data ----
 derived_in <- file.path("02_data", "03_derived_data")
@@ -28,7 +27,8 @@ chron_cv <- rwi_calc %>%
             .groups = "drop")
 
 # ---- 03 Export data frame ----
-write_csv(x = chron_cv, file = file.path(derived_in, "chronology_cv.csv"))
+write.csv(x = chron_cv, file = file.path(derived_in, "chronology_cv.csv"),
+          row.names = FALSE)
 # --------------------------------------------------------------------------- *
 # --------------------------------------------------------------------------- *
 # --------------------------------------------------------------------------- *

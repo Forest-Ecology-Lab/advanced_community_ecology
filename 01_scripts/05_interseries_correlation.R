@@ -16,7 +16,6 @@
 library(dplR)
 library(dplyr)
 library(tibble)
-library(readr)
 
 # ---- 01 Prepare the data ----
 itrdb_in <- file.path("02_data", "01_tree_data",
@@ -36,14 +35,15 @@ pb <- txtProgressBar(min = 0, max = length(rwl_files), style = 3)
 for (i in seq_along(rwl_files)) {
 
   rwl_path <- rwl_files[i]
-  rwl_name <- gsub("\\.rwl$", "", basename(rwl_path))
+  rwl_name <- tools::file_path_sans_ext(basename(rwl_path))
 
   setTxtProgressBar(pb, i)
 
   rwl <- tryCatch(
     {
       capture.output(
-        rwl <- read.rwl(rwl_path)
+        rwl <- read.rwl(rwl_path),
+        file = NULL
       )
       rwl
     },
@@ -129,10 +129,12 @@ flags <- bind_rows(flag_list)
 # ---- 04 Export the data frames ----
 derived_out <- file.path("02_data", "03_derived_data")
 
-write_csv(x = interseries_df,
-          file = file.path(derived_out, "mean_interseries.csv"))
-write_csv(x = flags,
-          file = file.path(derived_out, "interseries_cor_flags.csv"))
+write.csv(x = interseries_df,
+          file = file.path(derived_out, "mean_interseries.csv"),
+          row.names = FALSE)
+write.csv(x = flags,
+          file = file.path(derived_out, "interseries_cor_flags.csv"),
+          row.names = FALSE)
 # --------------------------------------------------------------------------- *
 # --------------------------------------------------------------------------- *
 # --------------------------------------------------------------------------- *

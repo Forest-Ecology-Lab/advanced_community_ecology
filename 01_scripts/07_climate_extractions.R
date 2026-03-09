@@ -14,7 +14,6 @@
 # ---- Load libraries ----
 library(terra)
 library(dplyr)
-library(readr)
 
 # ---- 01: Prepare the data ----
 itrdb_metadata <- read.csv(file.path("02_data", "01_tree_data",
@@ -68,35 +67,40 @@ clim_names <- paste(rep(years, each = 12),
                     sep = "_")
 
 # ---- 02: Extract data from CLimatic Grids ----
-pre_sites <- as.data.frame(extract(pre, pts)) %>%
+pre_sites <- as.data.frame(terra::extract(pre, pts)) %>%
   mutate(rwl = coordinates$rwl, .before = 1) %>%
   select(-ID) %>%
   setNames(c("rwl", clim_names))
-tmp_sites <- as.data.frame(extract(tmp, pts)) %>%
+tmp_sites <- as.data.frame(terra::extract(tmp, pts)) %>%
   mutate(rwl = coordinates$rwl, .before = 1) %>%
   select(-ID) %>%
   setNames(c("rwl", clim_names))
-tmn_sites <- as.data.frame(extract(tmn, pts)) %>%
+tmn_sites <- as.data.frame(terra::extract(tmn, pts)) %>%
   mutate(rwl = coordinates$rwl, .before = 1) %>%
   select(-ID) %>%
   setNames(c("rwl", clim_names))
-tmx_sites <- as.data.frame(extract(tmx, pts)) %>%
+tmx_sites <- as.data.frame(terra::extract(tmx, pts)) %>%
   mutate(rwl = coordinates$rwl, .before = 1) %>%
   select(-ID) %>%
   setNames(c("rwl", clim_names))
-spei_sites <- as.data.frame(extract(spei, pts)) %>%
+spei_sites <- as.data.frame(terra::extract(spei, pts)) %>%
   mutate(rwl = coordinates$rwl, .before = 1) %>%
   select(-ID) %>%
   select(-c(spei_1:spei_12)) %>%
   setNames(c("rwl", clim_names[-(1:12)]))
 
 # ---- 03: Export data sets ----
-write_csv(x = pre_sites,
-          file = file.path(derived_in, "precipitation_itrdb.csv"))
-write_csv(x = tmp_sites, file = file.path(derived_in, "temperature_itrdb.csv"))
-write_csv(x = tmn_sites, file = file.path(derived_in, "mintemp_itrdb.csv"))
-write_csv(x = tmx_sites, file = file.path(derived_in, "maxtemp_itrdb.csv"))
-write_csv(x = spei_sites, file = file.path(derived_in, "spei6month_itrdb.csv"))
+write.csv(x = pre_sites,
+          file = file.path(derived_in, "precipitation_itrdb.csv"),
+          row.names = FALSE)
+write.csv(x = tmp_sites, file = file.path(derived_in, "temperature_itrdb.csv"),
+          row.names = FALSE)
+write.csv(x = tmn_sites, file = file.path(derived_in, "mintemp_itrdb.csv"),
+          row.names = FALSE)
+write.csv(x = tmx_sites, file = file.path(derived_in, "maxtemp_itrdb.csv"),
+          row.names = FALSE)
+write.csv(x = spei_sites, file = file.path(derived_in, "spei6month_itrdb.csv"),
+          row.names = FALSE)
 # --------------------------------------------------------------------------- *
 # --------------------------------------------------------------------------- *
 # --------------------------------------------------------------------------- *
