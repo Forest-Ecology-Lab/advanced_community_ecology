@@ -93,58 +93,10 @@ itrdb_pre_l <- itrdb_pre %>%
   mutate(year = as.integer(year)) %>% 
   left_join(itrdb_metadata %>% select(rwl,elevation,species_code))
 
-# Summarise climate data
-pre_gs <- itrdb_pre_l %>%
-  filter(month %in% c("May","Jun","Jul","Aug")) %>%
-  group_by(rwl, year) %>%
-  summarise(pre_gs = mean(pre, na.rm = TRUE), .groups = "drop")
 
 # Prepare rwi data
-rwi_clim <- itrdb_rwi %>%
-  left_join(pre_gs, by = c("rwl","year"))
+rwi_clim <- itrdb_pre_l %>%
+  inner_join(itrdb_rwi %>% select(-first_year, -last_year, -elevation,-species_code, -species_name),
+            by = c("rwl","year"))
 
-# Correlation Analysis
-cor_pre <- rwi_clim %>%
-  group_by(rwl) %>%
-  summarise(
-    n_pairs = sum(complete.cases(rwi, pre_gs)),
-    cor_pre_gs = ifelse(
-      n_pairs >= 2,
-      cor(rwi, pre_gs, use = "complete.obs"),
-      NA_real_
-    ),
-    .groups = "drop"
-  )
 
-# Merge again with ITRDB Metadata
-cor_pre_map <- cor_pre %>%
-  left_join(itrdb_metadata, by = "rwl")
-
-# 03 Plot the Correlations ----
-plot1 <- ggplot() +
-  geom_sf(data = europe_crop, fill = "#d0d9db", color = "gray30",
-          linewidth = 0.2) +
-  geom_point(data = cor_pre_map %>%
-               #YOU CAN FILTER TO PLOT SPECIFIC GROUPS (species_code, elevation)
-               filter(species_code == "PISY"), 
-             aes(longitude, latitude, colour = cor_pre_gs)) +
-  scale_colour_gradient2(
-    low = "brown",
-    mid = "white",
-    high = "blue",
-    midpoint = 0) +
-  labs(title = "ITRDB Site correlation to Precipitation",
-       color = "Country",
-       x = "Longitude",
-       y = "Latitude") +
-  theme_classic() +
-  theme(panel.grid = element_line(colour = "gray90", linewidth = 0.3))
-
-# 04 Export maps ----
-maps_out <- file.path("03_output", "02_maps")
-
-ggsave(plot = plot1,
-       path = file.path(maps_out),
-       filename = "itrdb_pisy_climcorr.png",
-       width = 20, height = 20, units = "cm",
-       dpi = 300)
