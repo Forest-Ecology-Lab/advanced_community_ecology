@@ -22,8 +22,8 @@ rwi_calc <- read.csv(file.path(derived_in, "rwi_calculations.csv"))
 # ---- 02 Calculate Chronology CV ----
 chron_cv <- rwi_calc %>%
   group_by(rwl) %>%
-  summarise(sd = sd(rwi, na.rm = TRUE),
-            cv = sd(rwi, na.rm = TRUE) / mean(rwi, na.rm = TRUE),
+  summarise(sd = sd(std, na.rm = TRUE),
+            cv = sd(std, na.rm = TRUE) / mean(std, na.rm = TRUE),
             .groups = "drop")
 
 # ---- 03 Export data frame ----

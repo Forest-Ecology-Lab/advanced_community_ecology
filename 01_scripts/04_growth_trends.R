@@ -21,21 +21,27 @@ library(tibble)
 # 01 Prepare the data ----
 itrdb_in <- file.path("02_data", "01_tree_data",
                       "01_ITRDB_dendroecology")
+derived_in <- file.path("02_data", "03_derived_data")
 
-metadata <- read.csv(file.path(itrdb_in, "itrdb_site_metadata.csv")) %>%
-  tibble() %>%
-  select(rwl = studyCode, first_year, last_year, country,
-         latitude, longitude, elevation, species_code, species_name) %>%
-  mutate(rwl = tolower(rwl))
+# Remember to load the metadata previously created.
+metadata <- read.csv(file.path(derived_in, "metadata_age.csv")) %>%
+  tibble()
 
 rwl_files <- list.files(file.path(itrdb_in, "rwl"),
                         pattern = "\\.rwl$",
                         full.names = TRUE)
 
+# Filter the rwl files again
+rwl_files <- rwl_files[
+  tools::file_path_sans_ext(basename(rwl_files)) %in% metadata_filter$rwl
+]
+
+# Create the empty list that will be filled by the loop.
 chron_list <- vector("list", length(rwl_files))
 bai_list <- vector("list", length(rwl_files))
 flag_list <- vector("list", length(rwl_files))
 
+# Set up the progress bar
 pb <- txtProgressBar(min = 0, max = length(rwl_files), style = 3)
 
 # 02 Loop to calculate growth trends ----
@@ -130,8 +136,7 @@ for (i in seq_along(rwl_files)) {
 
   chron_list[[i]] <- site_chron %>%
     mutate(rwl = rwl_name) %>%
-    select(rwl, year, std, samp.depth) %>%
-    rename(rwi = std)
+    select(rwl, year, std, samp.depth)
 
   bai_list[[i]] <- site_bai %>%
     mutate(rwl = rwl_name) %>%
@@ -142,13 +147,24 @@ for (i in seq_along(rwl_files)) {
 close(pb)
 
 # 03 Generate the data frames ----
+# Bind the list into Dataframes
 chron_df <- bind_rows(chron_list)
 bai_df <- bind_rows(bai_list)
 flags <- bind_rows(flag_list)
 
+# Name the chronologies in the list
+chron_list <- chron_list[!vapply(chron_list, is.null, logical(1))]
+bai_list   <- bai_list[!vapply(bai_list, is.null, logical(1))]
+
+names(chron_list) <- vapply(chron_list, function(x) unique(x$rwl), character(1))
+
 # 04 Export the data frames ----
 derived_out <- file.path("02_data", "03_derived_data")
 
+# Chronologies as R object
+saveRDS(chron_list, file = file.path(derived_out, "chron_list.rds"))
+
+# Chronologies and other as csv files
 write.csv(x = chron_df, file = file.path(derived_out, "rwi_calculations.csv"),
           row.names = FALSE)
 write.csv(x = bai_df, file = file.path(derived_out, "bai_calculations.csv"),

@@ -16,13 +16,12 @@ library(terra)
 library(dplyr)
 
 # ---- 01: Prepare the data ----
-itrdb_metadata <- read.csv(file.path("02_data", "01_tree_data",
-                                     "01_ITRDB_dendroecology",
-                                     "itrdb_site_metadata.csv")) %>%
-  select(rwl = studyCode, first_year, last_year, country,
-         latitude, longitude, elevation, species_code, species_name) %>%
-  mutate(rwl = tolower(rwl)) %>% 
-  filter(!is.na(latitude), !is.na(longitude))
+
+derived_in <- file.path("02_data", "03_derived_data")
+
+# Remember to load the metadata previously created.
+metadata <- read.csv(file.path(derived_in, "metadata_age.csv")) %>%
+  tibble()
 
 # load and stack the climate variables with monthly resolution,
 # pre = precipitation, tmp = mean temperatue tmn = minimum temperature,
@@ -31,7 +30,6 @@ itrdb_metadata <- read.csv(file.path("02_data", "01_tree_data",
 climgrid_in <- file.path("02_data", "02_spatial_data", "01_climate",
                          "02_climgrid")
 spei_in <- file.path("02_data", "02_spatial_data", "01_climate", "03_spei")
-derived_in <- file.path("02_data", "03_derived_data")
 
 europe_extent <- ext(-10, 35, 35, 75)
 
@@ -50,7 +48,7 @@ tmx <- rast(file.path(climgrid_in, "cru_ts4.09.1901.2024.tmx.dat.nc"),
 spei <- rast(file.path(spei_in, "spei06.nc")) %>%
   crop(europe_extent)
 
-coordinates <- itrdb_metadata %>%
+coordinates <- metadata %>%
   select(rwl,
          lon = longitude,
          lat = latitude) %>%
@@ -65,6 +63,8 @@ months <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
 clim_names <- paste(rep(years, each = 12),
                     rep(months, times = length(years)),
                     sep = "_")
+
+
 
 # ---- 02: Extract data from CLimatic Grids ----
 pre_sites <- as.data.frame(terra::extract(pre, pts)) %>%

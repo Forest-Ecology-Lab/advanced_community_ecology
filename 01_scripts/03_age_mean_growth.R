@@ -20,15 +20,43 @@ library(dplR)
 itrdb_in <- file.path("02_data", "01_tree_data",
                       "01_ITRDB_dendroecology")
 
+derived_out <- file.path("02_data", "03_derived_data")
+
 metadata <- read.csv(file.path(itrdb_in, "itrdb_site_metadata.csv")) %>%
   tibble() %>%
   select(rwl = studyCode, first_year, last_year, country,
          latitude, longitude, elevation, species_code, species_name) %>%
   mutate(rwl = tolower(rwl))
 
+# ----- FILTER ------- *
+# Filter the data set depending on your research question by several variables.
+
+# First filter by one or several of these:
+# "rwl", "first_year", "last_year", "country", "latitude", "longitude",
+# "elevation", "species_code", "species_name".
+# Check the variables from the column you want to filter:
+# unique(metadata$country); range(metadata$elevation, na.rm = TRUE)
+# unique(metadata$species_name); range(metadata$latitude, na.rm = TRUE)
+
+metadata_filter <- metadata %>%
+  # In this case we will add a filter to only use "Pinus sylvestris L." (PISY)
+  filter(species_code == "PISY") %>%
+  distinct(rwl)
+
 rwl_files <- list.files(file.path(itrdb_in, "rwl"),
                         pattern = "\\.rwl$",
                         full.names = TRUE)
+
+# Here you apply the filter to the RWL files by the parameter you established
+# before. NOTE: if you want to work with the whole data set remember that it
+# will take more time to run.
+
+rwl_files <- rwl_files[
+  tools::file_path_sans_ext(basename(rwl_files)) %in% metadata_filter$rwl
+]
+
+# Check how many rwl files you end up with.
+message(length(rwl_files), " .rwl files selected from metadata filter")
 
 age_list <- vector("list", length(rwl_files))
 pb <- txtProgressBar(min = 0, max = length(rwl_files), style = 3)
@@ -119,7 +147,6 @@ close(pb)
 tree_age <- bind_rows(age_list)
 
 # 04 Export the data frames ----
-derived_out <- file.path("02_data", "03_derived_data")
 
 # Tree level
 write.csv(x = tree_age,

@@ -21,9 +21,20 @@ library(tibble)
 itrdb_in <- file.path("02_data", "01_tree_data",
                       "01_ITRDB_dendroecology")
 
+derived_in <- file.path("02_data", "03_derived_data")
+
+# Remember to load the metadata previously created.
+metadata <- read.csv(file.path(derived_in, "metadata_age.csv")) %>%
+  tibble()
+
 rwl_files <- list.files(file.path(itrdb_in, "rwl"),
                         pattern = "\\.rwl$",
                         full.names = TRUE)
+
+# Filter the rwl files again
+rwl_files <- rwl_files[
+  tools::file_path_sans_ext(basename(rwl_files)) %in% metadata_filter$rwl
+]
 
 interseries_cor_list <- vector("list", length(rwl_files))
 flag_list <- vector("list", length(rwl_files))

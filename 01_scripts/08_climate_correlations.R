@@ -14,14 +14,21 @@
 # ---- Load libraries ----
 library(dplyr)
 library(tibble)
+library(purrr)
+library(stringr)
 library(tidyverse)
+library(terra)
 library(rnaturalearth)
 library(rnaturalearthdata)
 library(sf)
+library(treeclim)
+
+# --------------------------------------------------------------------------- *
+# --------------------------------------------------------------------------- *
 
 # ---- 01 Load Data ----
-
-## High Resolution map of Europe
+# ----Map of Europe ---- *
+## Load the map
 europe_map <- ne_countries(scale = "large",
                            continent = "Europe",
                            returnclass = "sf")
@@ -29,28 +36,17 @@ europe_map <- ne_countries(scale = "large",
 ## Set Europe limits
 europe_limits <- list(xlim = c(-10, 35), ylim = c(35, 75))
 
-europe_crop <- st_crop(europe_map,
-                       xmin = min(europe_limits$xlim),
-                       xmax = max(europe_limits$xlim),
-                       ymin = min(europe_limits$ylim),
-                       ymax = max(europe_limits$ylim))
-
-## Set europe extent
-europe_extent <- ext(europe_limits$xlim[1], europe_limits$xlim[2],
-                     europe_limits$ylim[1], europe_limits$ylim[2])
-
-## ITRDB Metadata
-itrdb_metadata <- read.csv(file.path("02_data", "01_tree_data",
-                                     "01_ITRDB_dendroecology",
-                                     "itrdb_site_metadata.csv")) %>%
-  select(rwl = studyCode, first_year, last_year, country,
-         latitude, longitude, elevation, species_code, species_name) %>%
-  mutate(rwl = tolower(rwl)) %>% 
-  filter(!is.na(latitude), !is.na(longitude))
-
-## Load Climate Data
+# ---- Load ITRDB filtered Metadata ---- *
 derived_in <- file.path("02_data", "03_derived_data")
 
+# Remember to load the metadata previously created.
+metadata <- read.csv(file.path(derived_in, "metadata_age.csv")) %>%
+  tibble()
+
+# ---- Load the chronologies ----- *
+itrdb_rwi <- readRDS(file.path(derived_in, "chron_list.rds"))
+
+# ---- Load the Climate Data ----- *
 itrdb_pre <- read.csv(file.path(derived_in, "precipitation_itrdb.csv"),
                       check.names = FALSE)
 itrdb_tmp <- read.csv(file.path(derived_in, "temperature_itrdb.csv"),
@@ -59,44 +55,183 @@ itrdb_tmn <- read.csv(file.path(derived_in, "mintemp_itrdb.csv"),
                       check.names = FALSE)
 itrdb_tmx <- read.csv(file.path(derived_in, "maxtemp_itrdb.csv"),
                       check.names = FALSE)
-itrdb_spei <- read.csv(file.path(derived_in, "spei6month_itrdb.csv"),
-                       check.names = FALSE)
 
-# Tree Ring Derived Data
-itrdb_treeage <- read.csv(file.path(derived_in, "tree_age.csv")) %>%
-  tibble() %>%
-  filter(first >= 1901)
-itrdb_rwi <- read.csv(file.path(derived_in, "rwi_calculations.csv")) %>%
-  tibble() %>%
-  left_join(itrdb_metadata, by = "rwl") %>%
-  filter(year >= 1901)
-itrdb.bai <- read.csv(file.path(derived_in, "bai_calculations.csv")) %>%
-  tibble() %>%
-  left_join(itrdb_metadata, by = "rwl") %>%
-  filter(year >= 1901)
-itrdb_chr_cv <- read.csv(file.path(derived_in, "chronology_cv.csv")) %>%
-  tibble() %>%
-left_join(itrdb_metadata, by = "rwl")
+## Convert to long format
 
-itrdb_interseries_cor <- read.csv(file.path(derived_in, "mean_interseries.csv")) %>%
-  tibble() %>%
-  left_join(itrdb_metadata, by = "rwl")
-  
-# ---- 02 Climate Correlation Analysis ----
-
-# Convert to long format
-itrdb_pre_l <- itrdb_pre %>%
+### Precipitation
+pre_l <- itrdb_pre %>%
   pivot_longer(-rwl,
                names_to = "date",
                values_to = "pre") %>%
-  separate(date, into = c("year","month"), sep = "_") %>%
-  mutate(year = as.integer(year)) %>% 
-  left_join(itrdb_metadata %>% select(rwl,elevation,species_code))
+  separate(date, into = c("year", "month"), sep = "_") %>%
+  mutate(year = as.integer(year))
+
+### Temperature
+tmp_l <- itrdb_tmp %>%
+  pivot_longer(-rwl,
+               names_to = "date",
+               values_to = "tmp") %>%
+  separate(date, into = c("year", "month"), sep = "_") %>%
+  mutate(year = as.integer(year))
+
+### Minimum Temperature
+tmn_l <- itrdb_tmn %>%
+  pivot_longer(-rwl,
+               names_to = "date",
+               values_to = "tmn") %>%
+  separate(date, into = c("year", "month"), sep = "_") %>%
+  mutate(year = as.integer(year))
+
+### Maximum Temperature
+tmx_l <- itrdb_tmx %>%
+  pivot_longer(-rwl,
+               names_to = "date",
+               values_to = "tmx") %>%
+  separate(date, into = c("year", "month"), sep = "_") %>%
+  mutate(year = as.integer(year))
+
+### Join all together
+clim_l <-  list(pre_l, tmp_l, tmn_l, tmx_l) %>%
+  reduce(left_join, by = c("rwl", "year", "month"))
+# Tree Ring Derived Data
+
+# --------------------------------------------------------------------------- *
+# --------------------------------------------------------------------------- *
+
+# ---- 02 Loop of climate correlations through sites ----
+
+# Set variables for loop
+site_names <- names(itrdb_rwi)
+clim_vars <- c("pre", "tmp", "tmn", "tmx")
+
+results_list <- list()
+k <- 1
+
+# Loop through sites and variables
+pb <- txtProgressBar(min = 0, max = length(site_names), style = 3)
+
+for (i in seq_along(site_names)) {
+
+  site <- site_names[i]
+
+  chrono_site <- itrdb_rwi[[site]] %>%
+    select(year, std) %>%
+    as.data.frame() %>%
+    column_to_rownames("year")
+
+  for (v in clim_vars) {
+
+    out <- tryCatch({
+
+      climate_site <- clim_l %>%
+        filter(rwl == site) %>%
+        select(year, month, all_of(v)) %>%
+        mutate(month = match(month, month.abb)) %>%
+        as.data.frame()
+
+      resp <- dcc(
+                  chrono = chrono_site,
+                  climate = climate_site,
+                  selection = -6:9,
+                  verbose = FALSE)
 
 
-# Prepare rwi data
-rwi_clim <- itrdb_pre_l %>%
-  inner_join(itrdb_rwi %>% select(-first_year, -last_year, -elevation,-species_code, -species_name),
-            by = c("rwl","year"))
+      data.frame(rwl = site,
+                 clim_var = v,
+                 window = rownames(resp$coef),
+                 coef = resp$coef$coef,
+                 significant = as.logical(resp$coef$significant),
+                 month = resp$coef$month,
+                 stringsAsFactors = FALSE)
+
+    }, error = function(e) {
+
+      data.frame(rwl = site,
+        clim_var = v,
+        window = NA,
+        coef = NA_real_,
+        stringsAsFactors = FALSE
+      )
+    })
+
+    results_list[[k]] <- out
+    k <- k + 1
+  }
+
+  setTxtProgressBar(pb, i)
+}
+
+close(pb)
+
+# --------------------------------------------------------------------------- *
+# --------------------------------------------------------------------------- *
+
+# ---- 03 Plot the data ----
+
+clim_coefs <- bind_rows(results_list) %>%
+  mutate(
+    month_plot = ifelse(
+      grepl("prev", window),
+      paste0("p", month),
+      month
+    ),
+    month_plot = factor(
+      month_plot,
+      levels = c("pJun", "pJul", "pAug", "pSep", "pOct", "pNov", "pDec",
+                 "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP")
+    )
+  )
+
+saveRDS(object = clim_coefs,
+        file = file.path(derived_in, "clim_coefs.rds"))
+
+clim_plot <- clim_coefs %>%
+  select(rwl, month_plot, clim_var, coef, significant) %>%
+  left_join(metadata, by = "rwl")
 
 
+# mean line and proportion of significant sites
+clim_mean <- clim_plot %>%
+  filter(species_code == "PISY") %>%
+  group_by(clim_var, month_plot) %>%
+  summarise(
+    mean_coef = mean(coef, na.rm = TRUE),
+    prop_sig = mean(significant, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(mark_sig = prop_sig >= 0.5)
+
+ggplot() +
+  geom_line(
+    data = clim_plot,
+    aes(x = month_plot, y = coef, group = rwl),
+    colour = "grey70",
+    alpha = 0.08,
+    linewidth = 0.3
+  ) +
+  geom_line(
+    data = clim_mean,
+    aes(x = month_plot, y = mean_coef, group = 1),
+    colour = "black",
+    linewidth = 1
+  ) +
+  geom_point(
+    data = clim_mean,
+    aes(x = month_plot, y = mean_coef),
+    colour = "black",
+    size = 1.8
+  ) +
+  geom_point(
+    data = clim_mean %>% filter(mark_sig),
+    aes(x = month_plot, y = mean_coef),
+    colour = "red",
+    size = 3
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_wrap(~ clim_var, scales = "free_y") +
+  labs(
+    x = "Months",
+    y = "Climate correlation",
+    title = "Climate correlation signature across sites for PISY"
+  ) +
+  theme_minimal()
