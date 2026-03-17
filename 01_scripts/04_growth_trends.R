@@ -12,11 +12,15 @@
 ## - 02 Generate dataframes
 ## - 03 Export dataframes
 
+# --------------------------------------------------------------------------- *
+
 # ---- Load libraries ----
 library(dplR)
 library(dplyr)
 library(tidyr)
 library(tibble)
+
+# --------------------------------------------------------------------------- *
 
 # 01 Prepare the data ----
 itrdb_in <- file.path("02_data", "01_tree_data",
@@ -31,10 +35,16 @@ rwl_files <- list.files(file.path(itrdb_in, "rwl"),
                         pattern = "\\.rwl$",
                         full.names = TRUE)
 
+metadata_filter <- readRDS(file = file.path(derived_in,
+                                            "metadata_filter.rds"))
+
 # Filter the rwl files again
 rwl_files <- rwl_files[
   tools::file_path_sans_ext(basename(rwl_files)) %in% metadata_filter$rwl
 ]
+
+# --------------------------------------------------------------------------- *
+# 02 Loop to calculate growth trends ----
 
 # Create the empty list that will be filled by the loop.
 chron_list <- vector("list", length(rwl_files))
@@ -44,7 +54,6 @@ flag_list <- vector("list", length(rwl_files))
 # Set up the progress bar
 pb <- txtProgressBar(min = 0, max = length(rwl_files), style = 3)
 
-# 02 Loop to calculate growth trends ----
 for (i in seq_along(rwl_files)) {
 
   rwl_path <- rwl_files[i]
@@ -145,6 +154,7 @@ for (i in seq_along(rwl_files)) {
   flag_list[[i]] <- NULL
 }
 close(pb)
+# --------------------------------------------------------------------------- *
 
 # 03 Generate the data frames ----
 # Bind the list into Dataframes
@@ -158,17 +168,18 @@ bai_list   <- bai_list[!vapply(bai_list, is.null, logical(1))]
 
 names(chron_list) <- vapply(chron_list, function(x) unique(x$rwl), character(1))
 
+# --------------------------------------------------------------------------- *
 # 04 Export the data frames ----
 derived_out <- file.path("02_data", "03_derived_data")
 
-# Chronologies as R object
+# Chronologies as R object (It is faster to load)
 saveRDS(chron_list, file = file.path(derived_out, "chron_list.rds"))
 
 # Chronologies and other as csv files
 write.csv(x = chron_df, file = file.path(derived_out, "rwi_calculations.csv"),
           row.names = FALSE)
 write.csv(x = bai_df, file = file.path(derived_out, "bai_calculations.csv"),
-          row.names = FALSE)
+          row.names = FALSE)b
 write.csv(x = flags, file = file.path(derived_out, "growth_trend_flags.csv"),
           row.names = FALSE)
 # --------------------------------------------------------------------------- *

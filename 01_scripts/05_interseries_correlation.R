@@ -17,13 +17,14 @@ library(dplR)
 library(dplyr)
 library(tibble)
 
+# --------------------------------------------------------------------------- *
+
 # ---- 01 Prepare the data ----
 itrdb_in <- file.path("02_data", "01_tree_data",
                       "01_ITRDB_dendroecology")
-
 derived_in <- file.path("02_data", "03_derived_data")
 
-# Remember to load the metadata previously created.
+# Load the metadata previously created.
 metadata <- read.csv(file.path(derived_in, "metadata_age.csv")) %>%
   tibble()
 
@@ -31,18 +32,23 @@ rwl_files <- list.files(file.path(itrdb_in, "rwl"),
                         pattern = "\\.rwl$",
                         full.names = TRUE)
 
+metadata_filter <- readRDS(file = file.path(derived_in,
+                                            "metadata_filter.rds"))
+
 # Filter the rwl files again
 rwl_files <- rwl_files[
   tools::file_path_sans_ext(basename(rwl_files)) %in% metadata_filter$rwl
 ]
 
+# --------------------------------------------------------------------------- *
+
+# ---- 02 Loop to calculate Interseries Correlations ----
 interseries_cor_list <- vector("list", length(rwl_files))
 flag_list <- vector("list", length(rwl_files))
 
 
 pb <- txtProgressBar(min = 0, max = length(rwl_files), style = 3)
 
-# ---- 02 Loop to calculate Interseries Correlations ----
 for (i in seq_along(rwl_files)) {
 
   rwl_path <- rwl_files[i]
@@ -133,9 +139,13 @@ for (i in seq_along(rwl_files)) {
 }
 close(pb)
 
+# --------------------------------------------------------------------------- *
+
 # ---- 03 Generate the data frames ----
 interseries_df <- bind_rows(interseries_cor_list)
 flags <- bind_rows(flag_list)
+
+# --------------------------------------------------------------------------- *
 
 # ---- 04 Export the data frames ----
 derived_out <- file.path("02_data", "03_derived_data")

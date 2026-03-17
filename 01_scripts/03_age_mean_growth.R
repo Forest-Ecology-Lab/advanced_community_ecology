@@ -12,6 +12,9 @@
 ## - 02 Generate dataframes
 ## - 03 Export dataframes
 
+# --------------------------------------------------------------------------- *
+# --------------------------------------------------------------------------- *
+
 # ---- Load libraries ----
 library(dplyr)
 library(dplR)
@@ -20,7 +23,7 @@ library(dplR)
 itrdb_in <- file.path("02_data", "01_tree_data",
                       "01_ITRDB_dendroecology")
 
-derived_out <- file.path("02_data", "03_derived_data")
+derived_in <- file.path("02_data", "03_derived_data")
 
 metadata <- read.csv(file.path(itrdb_in, "itrdb_site_metadata.csv")) %>%
   tibble() %>%
@@ -38,11 +41,59 @@ metadata <- read.csv(file.path(itrdb_in, "itrdb_site_metadata.csv")) %>%
 # unique(metadata$country); range(metadata$elevation, na.rm = TRUE)
 # unique(metadata$species_name); range(metadata$latitude, na.rm = TRUE)
 
+# Here are some examples you can use to filter your data:
+
+# == BY SPECIES ==
+## Check the unique values
+unique(metadata$species_code)
+## Apply the filter
 metadata_filter <- metadata %>%
-  # In this case we will add a filter to only use "Pinus sylvestris L." (PISY)
   filter(species_code == "PISY") %>%
   distinct(rwl)
 
+# == BY COUNTRY ==
+## Check the unique values
+unique(metadata$country)
+## Apply the filter
+metadata_filter <- metadata %>%
+  filter(country == "Norway") %>%
+  distinct(rwl)
+
+# == BY YEAR ==
+## Check the unique values
+range(metadata$last_year, na.rm = TRUE)
+## Apply the filter OLDER THAN
+metadata_filter <- metadata %>%
+  filter(last_year >= 1980) %>%
+  distinct(rwl)
+
+## Apply the filter YOUNGER THAN
+metadata_filter <- metadata %>%
+  filter(last_year <= 1980) %>%
+  distinct(rwl)
+
+## Apply the filter YEAR RANGE
+metadata_filter <- metadata %>%
+  filter(last_year >= 1980,
+         last_year <= 2000) %>%
+  distinct(rwl)
+
+# == OR A MIX ==
+## Apply the filter for country and years
+metadata_filter <- metadata %>%
+  filter(country == "Norway",
+         last_year >= 1980,
+         last_year <= 2000) %>%
+  distinct(rwl)
+
+# Gives you the filter to do your analysis
+print(metadata_filter)
+
+# Export the filter to use it in following scripts
+saveRDS(object = metadata_filter,
+        file = file.path(derived_in, "metadata_filter.rds"))
+
+# Set the rwl files
 rwl_files <- list.files(file.path(itrdb_in, "rwl"),
                         pattern = "\\.rwl$",
                         full.names = TRUE)
@@ -58,10 +109,16 @@ rwl_files <- rwl_files[
 # Check how many rwl files you end up with.
 message(length(rwl_files), " .rwl files selected from metadata filter")
 
+# --------------------------------------------------------------------------- *
+# --------------------------------------------------------------------------- *
+
+# 02 Loop to calculate growth variables ----
+
+
 age_list <- vector("list", length(rwl_files))
 pb <- txtProgressBar(min = 0, max = length(rwl_files), style = 3)
 
-# 02 Loop to calculate growth variables ----
+# Loop
 for (i in seq_along(rwl_files)) {
 
   rwl_path <- rwl_files[i]
@@ -147,6 +204,7 @@ close(pb)
 tree_age <- bind_rows(age_list)
 
 # 04 Export the data frames ----
+derived_out <- file.path("02_data", "03_derived_data")
 
 # Tree level
 write.csv(x = tree_age,

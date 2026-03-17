@@ -21,11 +21,10 @@
 ### -- 4. Detrended data set not older than 1900
 ### -- 5. No pointer year calculated for detrended data set
 
-### Last update: 2026.02.23 ### Linted code
 
 ###-------------------------------------------------------------------------- *
 
-#---------------------Load libraries-------------------------------------------
+# ---- Load libraries ---- *
 library(tidyverse)
 library(dplyr)
 library(dplR)
@@ -33,7 +32,9 @@ library(pointRes)
 library(tibble)
 library(furrr)
 
-##-- Step 1: Set the folders and file names------------------------------------
+# --------------------------------------------------------------------------- *
+
+# ---- Step 1: Set the folders and file names ----
 itrdb_in <- file.path("02_data", "01_tree_data", "01_ITRDB_dendroecology",
                       "rwl")
 derived_in <- file.path("02_data", "03_derived_data")
@@ -45,7 +46,8 @@ rwl_files <- list.files(file.path(itrdb_in),
 metadata <- read.csv(file.path(derived_in, "metadata_age.csv")) %>%
   tibble()
 
-metadata_filter <- readRDS(file.path(derived_in, "metadata_filter.rds"))
+metadata_filter <- readRDS(file = file.path(derived_in,
+                                            "metadata_filter.rds"))
 
 # Filter the rwl files again
 rwl_files <- rwl_files[
@@ -64,12 +66,18 @@ cat("Pointer years frequency", capture.output(
   sep = "\n"
   )
 
+# --------------------------------------------------------------------------- *
+
 # YOU CAN MODIFY THIS FILTER AS YOU WANT
+## The filter uses the 
 py_filter <- itrdb_py %>%
   count(pointer_year) %>%
   filter(n > 10)
 
+# Creates a list of only the pointer years
 yrs <- sort(unique(py_filter$pointer_year))
+
+# --------------------------------------------------------------------------- *
 
 ##-- Step 2: Calculate ITRDB resilience components--------------------------
 ## Calculate the resilience components using 'pointRes' package. Loads
@@ -95,7 +103,6 @@ mean_sd <- function(x) {
 
   df
 } # End of function 1
-
 
 ###-------------------------------------------------------------------------- *
 
@@ -224,16 +231,18 @@ process_one_rwl <- function(i) {
   resilience_out
 } # End of function 2
 
+###-------------------------------------------------------------------------- *
+
 # run in parallel
 plan(multisession, workers = max(1, parallel::detectCores() - 1))
 
 resilience_df <- future_map_dfr(seq_along(rwl_files), process_one_rwl,
                                    .options = furrr_options(seed = TRUE))
-#resilience_df
+# resilience_df
 itrdb_resilience <- resilience_df %>%
   left_join(metadata, by = "rwl")
 
-#Save the resilience info
+# Save the resilience info
 write.csv(x = itrdb_resilience, file = file.path("02_data", "03_derived_data",
                                                  "itrdb_resilience.csv"),
           row.names = FALSE)

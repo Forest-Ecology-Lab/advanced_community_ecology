@@ -24,7 +24,6 @@ library(sf)
 library(treeclim)
 
 # --------------------------------------------------------------------------- *
-# --------------------------------------------------------------------------- *
 
 # ---- 01 Load Data ----
 # ----Map of Europe ---- *
@@ -39,7 +38,7 @@ europe_limits <- list(xlim = c(-10, 35), ylim = c(35, 75))
 # ---- Load ITRDB filtered Metadata ---- *
 derived_in <- file.path("02_data", "03_derived_data")
 
-# Remember to load the metadata previously created.
+# Load the metadata previously created
 metadata <- read.csv(file.path(derived_in, "metadata_age.csv")) %>%
   tibble()
 
@@ -93,9 +92,7 @@ tmx_l <- itrdb_tmx %>%
 ### Join all together
 clim_l <-  list(pre_l, tmp_l, tmn_l, tmx_l) %>%
   reduce(left_join, by = c("rwl", "year", "month"))
-# Tree Ring Derived Data
 
-# --------------------------------------------------------------------------- *
 # --------------------------------------------------------------------------- *
 
 # ---- 02 Loop of climate correlations through sites ----
@@ -164,7 +161,6 @@ for (i in seq_along(site_names)) {
 close(pb)
 
 # --------------------------------------------------------------------------- *
-# --------------------------------------------------------------------------- *
 
 # ---- 03 Plot the data ----
 
@@ -182,6 +178,11 @@ clim_coefs <- bind_rows(results_list) %>%
     )
   )
 
+derived_out <- file.path("02_data", "03_derived_data")
+
+write.csv(x = clim_l, file = file.path(derived_out, "clim_long.csv"),
+          row.names = FALSE)
+
 saveRDS(object = clim_coefs,
         file = file.path(derived_in, "clim_coefs.rds"))
 
@@ -192,7 +193,6 @@ clim_plot <- clim_coefs %>%
 
 # mean line and proportion of significant sites
 clim_mean <- clim_plot %>%
-  filter(species_code == "PISY") %>%
   group_by(clim_var, month_plot) %>%
   summarise(
     mean_coef = mean(coef, na.rm = TRUE),

@@ -15,6 +15,8 @@
 library(terra)
 library(dplyr)
 
+# --------------------------------------------------------------------------- *
+
 # ---- 01: Prepare the data ----
 
 derived_in <- file.path("02_data", "03_derived_data")
@@ -64,7 +66,7 @@ clim_names <- paste(rep(years, each = 12),
                     rep(months, times = length(years)),
                     sep = "_")
 
-
+# --------------------------------------------------------------------------- *
 
 # ---- 02: Extract data from CLimatic Grids ----
 pre_sites <- as.data.frame(terra::extract(pre, pts)) %>%
@@ -88,6 +90,8 @@ spei_sites <- as.data.frame(terra::extract(spei, pts)) %>%
   select(-ID) %>%
   select(-c(spei_1:spei_12)) %>%
   setNames(c("rwl", clim_names[-(1:12)]))
+
+# --------------------------------------------------------------------------- *
 
 # ---- 03: Export data sets ----
 write.csv(x = pre_sites,

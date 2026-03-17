@@ -27,7 +27,6 @@ library(ggplot2)
 library(treeclim)
 
 # --------------------------------------------------------------------------- *
-# --------------------------------------------------------------------------- *
 
 # ---- 01 Load Data ----
 
@@ -63,7 +62,6 @@ spei_l <- itrdb_spei %>%
   separate(date, into = c("year", "month"), sep = "_") %>%
   mutate(year = as.integer(year))
 
-# --------------------------------------------------------------------------- *
 # --------------------------------------------------------------------------- *
 
 # ---- 02 Loop of climate correlations through sites ----
@@ -104,7 +102,6 @@ for (i in seq_along(site_names)) {
                 climate = spei_site,
                 selection = -6:9,
                 verbose = FALSE)
-
 
     # Saves it in a data frame with the correlation information.
     data.frame(rwl = site,
@@ -159,10 +156,12 @@ spei_coefs <- spei_coef_df %>%
 
 # Export the SPEI Coefficients in case you need them later
 
+write.csv(x = spei_l, file = file.path(derived_out, "spei_long.csv"),
+                row.names = FALSE)
+
 saveRDS(object = spei_coefs,
         file = file.path(derived_in, "spei_coefs.rds"))
 
-# --------------------------------------------------------------------------- *
 # --------------------------------------------------------------------------- *
 
 # ---- 03 Plot the data ----

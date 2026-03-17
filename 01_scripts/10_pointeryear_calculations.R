@@ -44,7 +44,8 @@ derived_in <- file.path("02_data", "03_derived_data")
 metadata <- read.csv(file.path(derived_in, "metadata_age.csv")) %>%
   tibble()
 
-metadata_filter <- readRDS(file.path(derived_in, "metadata_filter.rds"))
+metadata_filter <- readRDS(file = file.path(derived_in,
+                                            "metadata_filter.rds"))
 
 rwl_files <- list.files(file.path(itrdb_in, "rwl"),
                         pattern = "\\.rwl$",
@@ -55,14 +56,11 @@ rwl_files <- rwl_files[
   tools::file_path_sans_ext(basename(rwl_files)) %in% metadata_filter$rwl
 ]
 
+# --------------------------------------------------------------------------- *
+
 ##-- Step 2: Calculate ITRDB resilience components--------------------------
 ## Calculate the resilience components using 'pointRes' package. Loads
-## individually each df and do the analysis and then saves it in a general df.
-## Note: Modify the (ncol(rwl_data_check) and (nrow(rwl_data_check) thresholds
-## depending on the analysis you want to do. They are set in relation to the
-## pointer year calculation and the minimum amount of trees to calculate the
-## components.
-
+## individually each rwl and do the analysis and then saves it in a general df.
 
 pointeryear_calc <- function(i) {
   file <- rwl_files[i]
@@ -187,7 +185,9 @@ pointeryear_calc <- function(i) {
   negative_py
 }
 
-# run in parallel
+# --------------------------------------------------------------------------- *
+
+# run the loop in parallel
 plan(multisession, workers = max(1, parallel::detectCores() - 1))
 
 itrdb_pointeryear <- future_map_dfr(seq_along(rwl_files), pointeryear_calc,

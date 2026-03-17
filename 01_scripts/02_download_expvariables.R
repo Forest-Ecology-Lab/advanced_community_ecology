@@ -139,9 +139,9 @@ dir.create(eco_dir, recursive = TRUE, showWarnings = FALSE)
 tmpeco <- tempfile(fileext = ".zip")
 
 # This might fail when downloading. If so please download it directly from:
-# https://koeppen-geiger.vu-wien.ac.at/data/Koeppen-Geiger-ASCII.zip
-download.file(url = paste0("https://koeppen-geiger.vu-wien.ac.at/data/",
-                           "Koeppen-Geiger-ASCII.zip"),
+# https://koeppen-geiger.vu-wien.ac.at/Rcode/Map_KG-Global.zip
+download.file(url = paste0("https://koeppen-geiger.vu-wien.ac.at/Rcode/",
+                           "Map_KG-Global.zip"),
               destfile = tmpeco,
               mode = "wb", method = "libcurl")
 
