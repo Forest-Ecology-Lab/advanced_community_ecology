@@ -201,7 +201,8 @@ clim_mean <- clim_plot %>%
   ) %>%
   mutate(mark_sig = prop_sig >= 0.5)
 
-ggplot() +
+# REMEMBER TO UPDATE THE LABELS CORRECTLY
+cc_plot <- ggplot() +
   geom_line(
     data = clim_plot,
     aes(x = month_plot, y = coef, group = rwl),
@@ -235,3 +236,13 @@ ggplot() +
     title = "Climate correlation signature across sites for PISY"
   ) +
   theme_minimal()
+
+###-------------------------------------------------------------------------- *
+
+# 04 Export the plots ----
+maps_out <- file.path("03_output", "02_maps")
+plots_out <- file.path("03_output", "01_figures")
+
+ggsave(plot = cc_plot, filename = "climate_var_correlations.png",
+       path = plots_out, device = "png", dpi = 300,
+       width = 4500, height = 4500, units = "px")

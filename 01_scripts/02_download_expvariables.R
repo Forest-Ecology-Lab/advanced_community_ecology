@@ -179,6 +179,7 @@ writeRaster(soilgrids_europe_proj,
             overwrite = TRUE)
 
 # ---- 05 Topography ----
+## You can access this info here: https://www.earthenv.org/topography
 topo_out <- file.path("02_data", "02_spatial_data", "05_topography")
 dir.create(topo_out, recursive = TRUE, showWarnings = FALSE)
 
@@ -197,6 +198,8 @@ for (v in vars) {
 }
 
 # ---- 06 Mountains Classification ----
+# This data comes from:
+# https://www.sciencebase.gov/catalog/item/638fbf72d34ed907bf7d3080
 mount_out <- file.path("02_data", "02_spatial_data", "06_mountains")
 dir.create(mount_out, recursive = TRUE, showWarnings = FALSE)
 tmpmount <- tempfile(fileext = ".zip")
