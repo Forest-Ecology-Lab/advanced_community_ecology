@@ -34,7 +34,6 @@ coords <- meta %>%
   dplyr::select(longitude, latitude)
 
 # Site level data
-
 interseries <- read.csv(file.path(derived_out, "mean_interseries.csv"))
 chron_cv <- read.csv(file.path(derived_in, "chronology_cv.csv"))
 clim_coefs <- readRDS(file.path(derived_in, "clim_coefs.rds"))
@@ -98,7 +97,7 @@ ecoregions_raster <- terra::rasterize(ecoregions_sf,
                                            resolution = 1 / 10),
                                       field = "mainc_code")
 
-ecoregions <- crop(ecoregions_raster_mainclimate,
+ecoregions <- crop(ecoregions_raster,
                    europe_extent)
 
 # Soil characteristics 
@@ -122,7 +121,7 @@ northness <- rast(file.path(spatial_in, "05_topography",
                             "northness_10KMmd_GMTEDmd.tif")) %>%
   crop(europe_extent)
 
-mointains <- rast(file.path(spatial_in, "06_mountains",
+mountains <- rast(file.path(spatial_in, "06_mountains",
                             "k3classes.tif")) %>%
   crop(europe_extent)
 
@@ -144,13 +143,13 @@ metadata <- meta %>%
               dplyr::select(eastness = eastness_10KMmd_GMTEDmd)) %>%
   bind_cols(terra::extract(northness, coords) %>%
               dplyr::select(northness = northness_10KMmd_GMTEDmd)) %>%
-  bind_cols(terra::extract(mointains, coords) %>%
-              dplyr::select(mointains = Rowid))
+  bind_cols(terra::extract(mountains, coords) %>%
+              dplyr::select(mountains = Rowid))
 ###-------------------------------------------------------------------------- *
 
 # ---- 02 Prepare final Data frames ----
-## Site level metadata
 
+## Site level metadata
 site_level_data <- list(metadata, interseries, chron_cv,
                         clim_coefs, spei_coefs) %>%
   reduce(left_join, by = c("rwl"))
@@ -165,9 +164,31 @@ site_month_climate <- clim_sites %>%
   left_join(spei_sites, by = c("rwl", "year", "month")) %>%
   left_join(metadata, by = "rwl")
 
+site_growth_trend <- itrdb_chronologies %>%
+  group_by(rwl) %>%
+  # ADJUST THE TIME WINDOW YOU WANT TO CALCULATE
+  filter(year <= 2025,
+         year >= 1975) %>%
+  summarise(
+    n_years = n(),
+    growth_slope = coef(lm(std ~ year))[2],
+    .groups = "drop") %>%
+  left_join(metadata, by = "rwl")
+
 ## tree level metadata
 tree_year_growth <- bai %>%
   left_join(tree_age, by = c("rwl", "tree"))
+
+tree_growth_trend <- bai %>%
+  group_by(rwl, tree) %>%
+  filter(is.finite(bai)) %>% 
+  # ADJUST THE TIME WINDOW YOU WANT TO CALCULATE
+  filter(year <= 2025,
+         year >= 1975) %>%
+  summarise(
+    growth_slope = coef(lm(bai ~ year))[2],
+    .groups = "drop") %>%
+  left_join(metadata, by = "rwl")
 
 ###-------------------------------------------------------------------------- *
 
@@ -186,6 +207,12 @@ write.csv(x = site_year_resilience,
 write.csv(x = site_month_climate,
           file = file.path(data_out, "site_month_climate.csv"),
           row.names = FALSE)
+write.csv(x = site_growth_trend,
+          file = file.path(data_out, "site_growth_trend.csv"),
+          row.names = FALSE)
 write.csv(x = tree_year_growth,
           file = file.path(data_out, "tree_year_growth.csv"),
+          row.names = FALSE)
+write.csv(x = tree_growth_trend,
+          file = file.path(data_out, "tree_growth_trend.csv"),
           row.names = FALSE)
