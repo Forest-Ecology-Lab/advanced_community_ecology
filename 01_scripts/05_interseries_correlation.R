@@ -24,16 +24,19 @@ itrdb_in <- file.path("02_data", "01_tree_data",
                       "01_ITRDB_dendroecology")
 derived_in <- file.path("02_data", "03_derived_data")
 
+
 # Load the metadata previously created.
 metadata <- read.csv(file.path(derived_in, "metadata_age.csv")) %>%
   tibble()
 
+# Load the filter
+metadata_filter <- readRDS(file = file.path(derived_in,
+                                            "metadata_filter.rds"))
+
+# RWL paths
 rwl_files <- list.files(file.path(itrdb_in, "rwl"),
                         pattern = "\\.rwl$",
                         full.names = TRUE)
-
-metadata_filter <- readRDS(file = file.path(derived_in,
-                                            "metadata_filter.rds"))
 
 # Filter the rwl files again
 rwl_files <- rwl_files[
@@ -43,19 +46,26 @@ rwl_files <- rwl_files[
 # --------------------------------------------------------------------------- *
 
 # ---- 02 Loop to calculate Interseries Correlations ----
+
+# The loop will read the rwl files, then detrend it to calculate the 
+# interseries correlation.
 interseries_cor_list <- vector("list", length(rwl_files))
 flag_list <- vector("list", length(rwl_files))
 
-
+# Set the progress bar
 pb <- txtProgressBar(min = 0, max = length(rwl_files), style = 3)
 
+# Start the loop
 for (i in seq_along(rwl_files)) {
 
+  # Set paths and names of RWL files
   rwl_path <- rwl_files[i]
   rwl_name <- tools::file_path_sans_ext(basename(rwl_path))
 
+  # Start the progress bar
   setTxtProgressBar(pb, i)
 
+  # Read the rwl files
   rwl <- tryCatch(
     {
       capture.output(
@@ -78,6 +88,7 @@ for (i in seq_along(rwl_files)) {
     next
   }
 
+  # Detrend the RWL
   rwi <- tryCatch(
     {
       detrend(rwl = rwl, method = "Spline")
@@ -95,6 +106,7 @@ for (i in seq_along(rwl_files)) {
     next
   }
 
+  # Calculate the interseries correlation
   interseries_cor <- tryCatch(
     {
       interseries.cor(rwi)
@@ -113,45 +125,41 @@ for (i in seq_along(rwl_files)) {
     next
   }
 
-  mean_interseries_cor <- tryCatch(
-    {
-      mean(interseries_cor$res.cor, na.rm = TRUE)
-    },
-    error = function(e) {
-      message("Could not calculate Interseries Correlation mean ",
-              rwl_name, ": ", e$message)
-      NULL
-    }
-  )
-  if (is.null(mean_interseries_cor)) {
-    flag_list[[i]] <- tibble(
-      rwl = rwl_name,
-      flag = "Interseries cor failed"
-    )
-    next
-  }
+  # Save the interseries correlation results in to the list
+  interseries_cor_list[[i]] <- interseries_cor %>% 
+    mutate(rwl = rwl_name,
+           res.cor = interseries_cor$res.cor,
+           p.val = p.val) %>% 
+    tibble::rownames_to_column("tree")
 
-  interseries_cor_list[[i]] <- tibble(
-                                      rwl = rwl_name,
-                                      mean_inter_cor = mean_interseries_cor)
-
+  # Save the flags into the flag list
   flag_list[[i]] <- NULL
 }
+
+# Close the progress bar
 close(pb)
 
 # --------------------------------------------------------------------------- *
 
 # ---- 03 Generate the data frames ----
-interseries_df <- bind_rows(interseries_cor_list)
+interseries_tree <- bind_rows(interseries_cor_list)
 flags <- bind_rows(flag_list)
+
+interseries_site <- interseries_tree %>% 
+  group_by(rwl) %>% 
+  summarise(mean_cor = mean(res.cor, na.rm = TRUE),
+            mean_pval = mean(p.val, na.rm = TRUE))
 
 # --------------------------------------------------------------------------- *
 
 # ---- 04 Export the data frames ----
 derived_out <- file.path("02_data", "03_derived_data")
 
-write.csv(x = interseries_df,
-          file = file.path(derived_out, "mean_interseries.csv"),
+write.csv(x = interseries_tree,
+          file = file.path(derived_out, "interseries_tree.csv"),
+          row.names = FALSE)
+write.csv(x = interseries_site,
+          file = file.path(derived_out, "interseries_site.csv"),
           row.names = FALSE)
 write.csv(x = flags,
           file = file.path(derived_out, "interseries_cor_flags.csv"),
