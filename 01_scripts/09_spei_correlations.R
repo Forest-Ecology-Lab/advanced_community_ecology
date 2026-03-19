@@ -68,8 +68,7 @@ spei_l <- itrdb_spei %>%
 
 # Set variables for loop
 site_names <- names(itrdb_rwi)
-
-spei_list <- vector("list", length(site_names))
+spei_results <- list()
 
 # Loop through sites and variables
 pb <- txtProgressBar(min = 0, max = length(site_names), style = 3)
@@ -79,15 +78,14 @@ for (i in seq_along(site_names)) {
   # This will get the site that the iteration will be working with
   site <- site_names[i]
 
-  # This is where the results from the iteration will be stored
-  out <- tryCatch({
-
     # Extract the chronology from the list previously created and put it in the
     # correct format.
     chrono_site <- itrdb_rwi[[site]] %>%
       select(year, std) %>%
       as.data.frame() %>%
       column_to_rownames("year")
+
+    spei_results[[site]] <- tryCatch({
 
     # Extract the SPEI data for that specific site
     spei_site <- spei_l %>%
@@ -97,62 +95,43 @@ for (i in seq_along(site_names)) {
       as.data.frame()
 
     # Calculates the corelation of the site SPEI and Chronology
-    resp <- dcc(
-                chrono = chrono_site,
-                climate = spei_site,
-                selection = -6:9,
-                verbose = FALSE)
-
-    # Saves it in a data frame with the correlation information.
-    data.frame(rwl = site,
-               clim_var = "spei",
-               window = rownames(resp$coef),
-               coef = resp$coef$coef,
-               significant = as.logical(resp$coef$significant),
-               month = resp$coef$month,
-               stringsAsFactors = FALSE)
+    dcc(
+      chrono = chrono_site,
+      climate = spei_site,
+      selection = -6:9,
+      verbose = FALSE)
 
     # This will kick in if there is an error. If there is an error it will
-    # store it with NAs so we can know which site gave error
+    # give you an error
   }, error = function(e) {
-
-    data.frame(rwl = site,
-      clim_var = "spei",
-      window = NA_character_,
-      coef = NA_real_,
-      significant = NA,
-      month = NA,
-      stringsAsFactors = FALSE
-    )
+    message("Failed: ", site, " - ", v)
+    NULL
   })
-
-  # At the end the data frame will be stored inside the list.
-  spei_list[[i]] <- out
   setTxtProgressBar(pb, i)
-
 } # end of loop
 
 # Close the progress bar
 close(pb)
 
 # Creates a data frame using all the data calculated in the loop.
-spei_coef_df <- bind_rows(spei_list)
-
-# Clean the data and set up the levels
-spei_coefs <- spei_coef_df %>%
-  mutate(
-    month_plot = ifelse(
-      grepl("prev", window),
-      paste0("p", month),
-      month
-    ),
-    month_plot = factor(
-      month_plot,
-      levels = c("pJun", "pJul", "pAug", "pSep", "pOct", "pNov", "pDec",
-                 "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP")
-    )
-  ) %>%
-  filter(!is.na(coef))
+spei_coefs <- bind_rows(
+  lapply(names(spei_results), function(site) {
+    
+    resp <- spei_results[[site]]
+    
+    if (is.null(resp) || is.null(resp$coef)) {
+      return(NULL)
+    }
+    
+    resp$coef %>%
+      rownames_to_column(var = "window") %>%
+      mutate(rwl = site) %>%
+      select(
+        rwl, window, id, varname, month, coef,
+        significant, ci_lower, ci_upper
+      )
+  })
+)
 
 # Export the SPEI Coefficients in case you need them later
 
@@ -166,7 +145,7 @@ saveRDS(object = spei_coefs,
 
 # ---- 03 Plot the data ----
 spei_plot <- spei_coefs %>%
-  select(rwl, month_plot, clim_var, coef, significant) %>%
+  select(rwl, month, varname, coef, significant) %>%
   left_join(metadata, by = "rwl") %>%
   filter(!is.na(latitude), !is.na(longitude))
 
