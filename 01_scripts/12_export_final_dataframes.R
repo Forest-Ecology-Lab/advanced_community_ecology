@@ -150,20 +150,36 @@ metadata <- meta %>%
 # ---- 02 Prepare final Data frames ----
 
 ## Site level metadata
-site_level_data <- list(metadata, interseries, chron_cv,
-                        clim_coefs, spei_coefs) %>%
+### You will have the interseries correlation, the chronology coefficent of 
+### variation along with the metadata.
+site_growth_data <- list(metadata, interseries, chron_cv) %>%
   reduce(left_join, by = c("rwl"))
 
+### You will have the monthly climate correlations (temperature, max temperature,
+### min, temperature along with the metadata.
+site_clim_correlation <- metadata %>%
+  left_join(clim_coefs, by = "rwl")
+
+### You will have the SPEI correlations along with the metadata.
+site_spei_correlation <- metadata %>%
+  left_join(spei_coefs, by = "rwl")
+
+### You will get the site chronologies along with the metadata.
 site_year_chronologies <- itrdb_chronologies %>%
   left_join(metadata, by = "rwl")
 
+### You will get the site resilience (Resistance, Recovery, and Resilience),
+### along with the metadata
 site_year_resilience <- itrdb_resilience %>%
   left_join(metadata, by = "rwl")
 
+### You will get the site monthly information along with the metadata
 site_month_climate <- clim_sites %>%
   left_join(spei_sites, by = c("rwl", "year", "month")) %>%
   left_join(metadata, by = "rwl")
 
+### You will get the site growth trends along with the metadata. MAKE SURE THAT
+### YOU UPDATE THE TIME WINDOW.
 site_growth_trend <- itrdb_chronologies %>%
   group_by(rwl) %>%
   # ADJUST THE TIME WINDOW YOU WANT TO CALCULATE
@@ -175,10 +191,12 @@ site_growth_trend <- itrdb_chronologies %>%
     .groups = "drop") %>%
   left_join(metadata, by = "rwl")
 
-## tree level metadata
+## You will get the tree growth (BAI) level metadata along with the metadata.
 tree_year_growth <- bai %>%
   left_join(tree_age, by = c("rwl", "tree"))
 
+## You will get the tree growth trend along with the metadata. MAKE SURE THAT
+## YOU UPDATE THE TIME WINDOW ACCORDINGLY
 tree_growth_trend <- bai %>%
   group_by(rwl, tree) %>%
   filter(is.finite(bai)) %>% 
@@ -195,8 +213,14 @@ tree_growth_trend <- bai %>%
 # ---- 03 Export them ----
 data_out <- file.path("03_output", "03_dataframes")
 
-write.csv(x = site_level_data,
-          file = file.path(data_out, "site_level_data.csv"),
+write.csv(x = site_growth_data,
+          file = file.path(data_out, "site_growth_data.csv"),
+          row.names = FALSE)
+write.csv(x = site_clim_correlation,
+          file = file.path(data_out, "site_clim_correlation.csv"),
+          row.names = FALSE)
+write.csv(x = site_spei_correlation,
+          file = file.path(data_out, "site_spei_correlation.csv"),
           row.names = FALSE)
 write.csv(x = site_year_chronologies,
           file = file.path(data_out, "site_year_chronologies.csv"),
