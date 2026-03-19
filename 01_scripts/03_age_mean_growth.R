@@ -11,7 +11,6 @@
 ## - 01 Loop to calculate growth variables
 ## - 02 Generate dataframes
 ## - 03 Export dataframes
-
 # --------------------------------------------------------------------------- *
 # --------------------------------------------------------------------------- *
 
@@ -20,21 +19,24 @@ library(dplyr)
 library(dplR)
 
 # 01 Prepare the data ----
+# Set the folders path to locate the files.
 itrdb_in <- file.path("02_data", "01_tree_data",
                       "01_ITRDB_dendroecology")
 
 derived_in <- file.path("02_data", "03_derived_data")
 
+# Load the metadata
 metadata <- read.csv(file.path(itrdb_in, "itrdb_site_metadata.csv")) %>%
   tibble() %>%
   select(rwl = studyCode, first_year, last_year, country,
          latitude, longitude, elevation, species_code, species_name) %>%
   mutate(rwl = tolower(rwl))
 
-# ----- FILTER ------- *
-# Filter the data set depending on your research question by several variables.
+# ----- FILTER THE METADATA ------- *
+# DEPENDING ON YOUR RESEARCH QUESTION YOU WILL HAVE TO APPLY THIS FILTER!!!
+# Filter the data set depending on which variables you need.
 
-# First filter by one or several of these:
+# You can filter by one or several of these:
 # "rwl", "first_year", "last_year", "country", "latitude", "longitude",
 # "elevation", "species_code", "species_name".
 # Check the variables from the column you want to filter:
@@ -42,10 +44,12 @@ metadata <- read.csv(file.path(itrdb_in, "itrdb_site_metadata.csv")) %>%
 # unique(metadata$species_name); range(metadata$latitude, na.rm = TRUE)
 
 # Here are some examples you can use to filter your data:
+# NOTE: if you want to work with the whole data set remember that it
+# will take more time to run.
 
 # == BY SPECIES ==
 ## Check the unique values
-unique(metadata$species_code)
+table(metadata$species_code)
 ## Apply the filter
 metadata_filter <- metadata %>%
   filter(species_code == "PISY") %>%
@@ -86,21 +90,26 @@ metadata_filter <- metadata %>%
          last_year <= 2000) %>%
   distinct(rwl)
 
-# Gives you the filter to do your analysis
+# Check that your filter worked
+cat("metadata files:", nrow(metadata),
+    "\nfiltered metadata files:", nrow(metadata_filter), "\n")
 print(metadata_filter)
 
 # Export the filter to use it in following scripts
 saveRDS(object = metadata_filter,
         file = file.path(derived_in, "metadata_filter.rds"))
 
-# Set the rwl files
+# This will set the path for each rwl file
 rwl_files <- list.files(file.path(itrdb_in, "rwl"),
                         pattern = "\\.rwl$",
                         full.names = TRUE)
 
 # Here you apply the filter to the RWL files by the parameter you established
-# before. NOTE: if you want to work with the whole data set remember that it
-# will take more time to run.
+# before.
+
+# NOTE! If you do not want to run a filter and want to use the whole data set,
+# please run metadata_filter <- metadata so you will not have to change all the
+# script.
 
 rwl_files <- rwl_files[
   tools::file_path_sans_ext(basename(rwl_files)) %in% metadata_filter$rwl
@@ -114,18 +123,29 @@ message(length(rwl_files), " .rwl files selected from metadata filter")
 
 # 02 Loop to calculate growth variables ----
 
+# This loop will go through all the RWL files it will read the RWL files, then
+# run the function rwl.stats() from the packge dplR to calculate the growth 
+# stats of each tree and site.
 
+# Set a list that will contain all the results from each iteration.
 age_list <- vector("list", length(rwl_files))
+# This is a proogress bar that will help visualize
 pb <- txtProgressBar(min = 0, max = length(rwl_files), style = 3)
 
-# Loop
+# Loop starts
+# i = interation
+# Each iteration is one RWL so it will run the entire loop fully once per RWL
+# file. So the time it takes will depend on how long is your filter.
 for (i in seq_along(rwl_files)) {
 
+  # Set the path of the file and file names
   rwl_path <- rwl_files[i]
   rwl_name <- tools::file_path_sans_ext(basename(rwl_path))
-
+  
+  # Update the progress bar
   if (i %% 20 == 0) setTxtProgressBar(pb, i)
 
+  # reads the rwl file without printing the results
   rwl <- tryCatch(
     {
       capture.output(
@@ -134,12 +154,14 @@ for (i in seq_along(rwl_files)) {
       )
       rwl
     },
+    # If there is an error reading the RWL this will give you a message
     error = function(e) {
       message("Could not read ", rwl_name, ": ", e$message)
       NULL
     }
   )
 
+  # It there is an error the output will be NAs and have a Flag
   if (is.null(rwl)) {
     age_list[[i]] <- tibble(
       rwl = rwl_name,
@@ -157,6 +179,8 @@ for (i in seq_along(rwl_files)) {
     next
   }
 
+  # Once the RWL is read it will calculate the rwl.stats which will generate
+  # the information of growth
   rwl_stat <- tryCatch(
     dplR::rwl.stats(rwl),
     error = function(e) {
@@ -165,6 +189,7 @@ for (i in seq_along(rwl_files)) {
     }
   )
 
+  # If not, then it will give you NAs and a Flag
   if (is.null(rwl_stat)) {
     age_list[[i]] <- tibble(
       rwl = rwl_name,
@@ -182,6 +207,8 @@ for (i in seq_along(rwl_files)) {
     next
   }
 
+  # Will save the output as a tibble and store it in a list that will be used
+  # later
   age_list[[i]] <- tibble(rwl_stat) %>%
     mutate(rwl = rwl_name) %>%
     select(
@@ -195,6 +222,7 @@ for (i in seq_along(rwl_files)) {
     )
 }
 
+# Closes the Progress bar
 close(pb)
 
 # Note: Some ITRDB .rwl files do not strictly follow Tucson format.
@@ -206,12 +234,12 @@ tree_age <- bind_rows(age_list)
 # 04 Export the data frames ----
 derived_out <- file.path("02_data", "03_derived_data")
 
-# Tree level
+# Data Frame at the tree level
 write.csv(x = tree_age,
           file = file.path(derived_out, "tree_age.csv"),
           row.names = FALSE)
 
-# Site Level
+# Data Frame at the Site Level
 metadata_age <- tree_age %>%
   group_by(rwl) %>%
   summarise(rwl_meanage = first(rwl_meanage),

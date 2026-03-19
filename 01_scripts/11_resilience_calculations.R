@@ -46,6 +46,7 @@ rwl_files <- list.files(file.path(itrdb_in),
 metadata <- read.csv(file.path(derived_in, "metadata_age.csv")) %>%
   tibble()
 
+# Load the filter
 metadata_filter <- readRDS(file = file.path(derived_in,
                                             "metadata_filter.rds"))
 
@@ -56,6 +57,7 @@ rwl_files <- rwl_files[
 
 rwl_files_names <- basename(rwl_files)
 
+# Load the pointer year
 itrdb_py <- read.csv(file = file.path(derived_in, "itrdb_pointeryear.csv"))
 
 cat("Pointer years frequency", capture.output(
@@ -63,13 +65,13 @@ cat("Pointer years frequency", capture.output(
     count(pointer_year) %>%
     arrange(desc(n))
 ),
-  sep = "\n"
+sep = "\n"
   )
 
 # --------------------------------------------------------------------------- *
 
 # YOU CAN MODIFY THIS FILTER AS YOU WANT
-## The filter uses the 
+## The filter uses the
 py_filter <- itrdb_py %>%
   count(pointer_year) %>%
   filter(n > 10)
@@ -169,43 +171,51 @@ process_one_rwl <- function(i) {
   resilience_comp <- res.comp(rwl_detrend, nb.yrs = c(4, 4), max.yrs.rec = 10)
 
   # Extract the resilience data frames
+  ## Resilience
   resil_df <- mean_sd(resilience_comp$resil) %>%
     rownames_to_column("pointer_year") %>%
     mutate(rwl = file_name, pointer_year = as.numeric(pointer_year))
 
+  ## Relative Resilience
   rel_df <- mean_sd(resilience_comp$rel.resil) %>%
     rownames_to_column("pointer_year") %>%
     mutate(rwl = file_name, pointer_year = as.numeric(pointer_year))
 
+  ## Resistance
   resist_df <- mean_sd(resilience_comp$resist) %>%
     rownames_to_column("pointer_year") %>%
     mutate(rwl = file_name, pointer_year = as.numeric(pointer_year))
 
+  ## Recovery
   recov_df <- mean_sd(resilience_comp$recov) %>%
     rownames_to_column("pointer_year") %>%
     mutate(rwl = file_name, pointer_year = as.numeric(pointer_year))
 
-  # Filter the resilience data frames by pointer years
+  # Filtered resilience data frames by pointer years
   resilience_pointy <- resil_df %>%
     filter(pointer_year %in% yrs) %>%
     transmute(rwl = file_name, pointer_year, resilience = average,
               resis_sd = sd)
 
+  # Filtered relative resilience data frames by pointer years
   re_resilience_pointy <- rel_df %>%
     filter(pointer_year %in% yrs) %>%
     transmute(rwl = file_name, pointer_year, rel_resilience = average,
               relres_sd = sd)
 
+  # Filtered resistance data frames by pointer years
   resistance_pointy <- resist_df %>%
     filter(pointer_year %in% yrs) %>%
     transmute(rwl = file_name, pointer_year, resistance = average,
               resist_sd = sd)
 
+  # Filtered recovery data frames by pointer years
   recovery_pointy <- recov_df %>%
     filter(pointer_year %in% yrs) %>%
     transmute(rwl = file_name, pointer_year, recovery = average,
               recov_sd = sd)
 
+  # Calculate the number of series used
   res_nb_series <- as.data.frame(resilience_comp$nb.series) %>%
     rownames_to_column("pointer_year") %>%
     mutate(pointer_year = as.numeric(pointer_year)) %>%
@@ -236,9 +246,11 @@ process_one_rwl <- function(i) {
 # run in parallel
 plan(multisession, workers = max(1, parallel::detectCores() - 1))
 
+# Run the function
 resilience_df <- future_map_dfr(seq_along(rwl_files), process_one_rwl,
-                                   .options = furrr_options(seed = TRUE))
-# resilience_df
+                                .options = furrr_options(seed = TRUE))
+
+# Final Resilience data frame
 itrdb_resilience <- resilience_df %>%
   left_join(metadata, by = "rwl")
 

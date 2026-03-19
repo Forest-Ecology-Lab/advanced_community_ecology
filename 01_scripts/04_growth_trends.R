@@ -27,16 +27,18 @@ itrdb_in <- file.path("02_data", "01_tree_data",
                       "01_ITRDB_dendroecology")
 derived_in <- file.path("02_data", "03_derived_data")
 
-# Remember to load the metadata previously created.
+# LOAD THE FILTERED METADATA
 metadata <- read.csv(file.path(derived_in, "metadata_age.csv")) %>%
   tibble()
 
+# LOAD THE PREVIOUS FILTER
+metadata_filter <- readRDS(file = file.path(derived_in,
+                                            "metadata_filter.rds"))
+
+# Set the path of the RWL files
 rwl_files <- list.files(file.path(itrdb_in, "rwl"),
                         pattern = "\\.rwl$",
                         full.names = TRUE)
-
-metadata_filter <- readRDS(file = file.path(derived_in,
-                                            "metadata_filter.rds"))
 
 # Filter the rwl files again
 rwl_files <- rwl_files[
@@ -46,6 +48,10 @@ rwl_files <- rwl_files[
 # --------------------------------------------------------------------------- *
 # 02 Loop to calculate growth trends ----
 
+# This loop will read the RWL file, then proceed to detrend the RWL,then it will
+# generate the chronology. After that it will proceed to calculate the BAI
+# growth. We use bai.out() because we are calculating it from in to out.
+
 # Create the empty list that will be filled by the loop.
 chron_list <- vector("list", length(rwl_files))
 bai_list <- vector("list", length(rwl_files))
@@ -54,13 +60,17 @@ flag_list <- vector("list", length(rwl_files))
 # Set up the progress bar
 pb <- txtProgressBar(min = 0, max = length(rwl_files), style = 3)
 
+# Loop starts
 for (i in seq_along(rwl_files)) {
 
+  # set rwl paths and names
   rwl_path <- rwl_files[i]
   rwl_name <- tools::file_path_sans_ext(basename(rwl_path))
 
+  # Set the progress bar
   setTxtProgressBar(pb, i)
 
+  # Read the RWL file
   rwl <- tryCatch(
     {
       capture.output(
@@ -83,6 +93,7 @@ for (i in seq_along(rwl_files)) {
     next
   }
 
+  # Detrend the RWL
   rwi <- tryCatch(
     {
       detrend(rwl = rwl, method = "Spline")
@@ -100,6 +111,7 @@ for (i in seq_along(rwl_files)) {
     next
   }
 
+  # Calculate the chronology from the site
   site_chron <- tryCatch(
     {
       chron(rwi) %>%
@@ -119,6 +131,7 @@ for (i in seq_along(rwl_files)) {
     next
   }
 
+  # Calculate the BAI growth
   site_bai_w <- tryCatch(
     {
       bai.out(rwl) %>%
@@ -138,21 +151,26 @@ for (i in seq_along(rwl_files)) {
     next
   }
 
+  # Convert to long format
   site_bai <- site_bai_w %>%
     pivot_longer(cols = -year,
                  names_to = "tree",
                  values_to = "bai")
 
+  # Save the chronology into the list
   chron_list[[i]] <- site_chron %>%
     mutate(rwl = rwl_name) %>%
     select(rwl, year, std, samp.depth)
 
+  # Save the BAI into the list 
   bai_list[[i]] <- site_bai %>%
     mutate(rwl = rwl_name) %>%
     select(rwl, tree, year, bai)
 
   flag_list[[i]] <- NULL
-}
+} # Loop end
+
+# Close the progress bar
 close(pb)
 # --------------------------------------------------------------------------- *
 
@@ -179,7 +197,7 @@ saveRDS(chron_list, file = file.path(derived_out, "chron_list.rds"))
 write.csv(x = chron_df, file = file.path(derived_out, "rwi_calculations.csv"),
           row.names = FALSE)
 write.csv(x = bai_df, file = file.path(derived_out, "bai_calculations.csv"),
-          row.names = FALSE)b
+          row.names = FALSE)
 write.csv(x = flags, file = file.path(derived_out, "growth_trend_flags.csv"),
           row.names = FALSE)
 # --------------------------------------------------------------------------- *

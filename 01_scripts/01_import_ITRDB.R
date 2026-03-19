@@ -1,4 +1,21 @@
 # -------------------------- Download the ITRDB ----------------------------- *
+### 2025.03.20: R Script: Download RWL files from the ITRDB and creates a 
+### metadata file. Files that will be used in the practice of forest ecology
+### from the course Advance Community Ecology.
+###
+###
+###
+### Elaborated by Zabdi López and Rubén D. Manzanedo, Forest Ecology Lab,
+### University of Bern
+
+## R script to:
+## - 01 Create ITRDB site metadata
+## - 02 List the ITRDB raw measurement files
+## - 03 Download the RWL Files
+
+# --------------------------------------------------------------------------- *
+# --------------------------------------------------------------------------- *
+# 
 # Script for
 # 1. ITRDB study metadata
 # 2. ITRDB list of raw measurement files
@@ -46,6 +63,7 @@ in_list <- unnest(p_dat$content$study, site)
 # If you want to check other Parameters you can check the link:
 # https://www.ncei.noaa.gov/access/paleo-search/study/params.json
 
+# THIS FILTER YOU CAN UPDATE IF YOU WANT TO DOWLOAD SPECIFIC RWL FILES
 itrdb_list <- in_list %>%
   filter(str_detect(studyName, "ITRDB"),
          str_detect(locationName, "Continent>Europe"),

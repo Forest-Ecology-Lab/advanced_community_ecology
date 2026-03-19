@@ -145,7 +145,6 @@ saveRDS(object = spei_coefs,
 
 # ---- 03 Plot the data ----
 spei_plot <- spei_coefs %>%
-  select(rwl, month, varname, coef, significant) %>%
   left_join(metadata, by = "rwl") %>%
   filter(!is.na(latitude), !is.na(longitude))
 

@@ -130,6 +130,7 @@ pointeryear_calc <- function(i) {
     ))
   }
 
+  # Calculate the pointer years
   pointer_years <- pointer.norm(
     rwl_py_detrend,
     series.thresh = 60,
@@ -138,6 +139,7 @@ pointeryear_calc <- function(i) {
     window = 13
   )
 
+  # Extract the py data frame and select only information after 1900
   py <- as.data.frame(pointer_years$out) %>% filter(year >= 1900)
 
   # Check 4
@@ -154,6 +156,7 @@ pointeryear_calc <- function(i) {
     ))
   }
 
+  # Select only negative years
   negative_py <- py %>%
     filter(nature == -1) %>%
     dplyr::select(-perc.pos.extreme, -perc.pos.strong, -perc.pos.weak) %>%
@@ -190,6 +193,7 @@ pointeryear_calc <- function(i) {
 # run the loop in parallel
 plan(multisession, workers = max(1, parallel::detectCores() - 1))
 
+# Run the function
 itrdb_pointeryear <- future_map_dfr(seq_along(rwl_files), pointeryear_calc,
                                     .options = furrr_options(seed = TRUE))
 

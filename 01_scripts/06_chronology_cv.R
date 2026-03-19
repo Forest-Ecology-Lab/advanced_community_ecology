@@ -17,9 +17,10 @@ library(dplyr)
 # ---- 01 Prepare data ----
 derived_in <- file.path("02_data", "03_derived_data")
 
+# RWI calculations
 rwi_calc <- read.csv(file.path(derived_in, "rwi_calculations.csv"))
 
-# ---- 02 Calculate Chronology CV ----
+# ---- 02 Calculate Chronology Coefficient of Variation ----
 chron_cv <- rwi_calc %>%
   group_by(rwl) %>%
   summarise(sd = sd(std, na.rm = TRUE),

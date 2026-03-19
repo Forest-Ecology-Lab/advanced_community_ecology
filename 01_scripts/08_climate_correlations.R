@@ -96,6 +96,9 @@ clim_l <-  list(pre_l, tmp_l, tmn_l, tmx_l) %>%
 # --------------------------------------------------------------------------- *
 
 # ---- 02 Loop of climate correlations through sites ----
+# This loop will take the prepare the climate in the correct format, then select
+# the chronology data. Once it does that, it will run the dcc() which will 
+# calculate the correlations.
 
 # Set variables for loop
 site_names <- names(itrdb_rwi)
@@ -104,23 +107,30 @@ dcc_results <- list()
 # Loop through sites and variables
 pb <- txtProgressBar(min = 0, max = length(site_names), style = 3)
 
+# Start of the loop
 for (i in seq_along(site_names)) {
 
+  # Get the site names
   site <- site_names[i]
 
+  # Select the site rwi
   chrono_site <- itrdb_rwi[[site]] %>%
     select(year, std) %>%
     as.data.frame() %>%
     column_to_rownames("year")
 
+  # Calculate correlations
   dcc_results[[site]] <- tryCatch({
 
+    # Set the climate data in the correct format
     climate_site <- clim_l %>%
       filter(rwl == site) %>%
       select(-rwl) %>%
       mutate(month = match(month, month.abb)) %>%
       as.data.frame()
 
+    # Calculate the climate correlations for all variables and save it on the
+    # list.
     dcc(
         chrono = chrono_site,
         climate = climate_site,
@@ -138,8 +148,9 @@ close(pb)
 
 # --------------------------------------------------------------------------- *
 
-# ---- 03 Plot the data ----
+# ---- Save the data frames ---- *
 
+# Extract the information from the list
 clim_coefs <- bind_rows(
   lapply(names(dcc_results), function(site) {
 
@@ -155,6 +166,7 @@ clim_coefs <- bind_rows(
   })
 )
 
+# Export the data frame
 derived_out <- file.path("02_data", "03_derived_data")
 
 write.csv(x = clim_l, file = file.path(derived_out, "clim_long.csv"),
@@ -163,6 +175,7 @@ write.csv(x = clim_l, file = file.path(derived_out, "clim_long.csv"),
 saveRDS(object = clim_coefs,
         file = file.path(derived_in, "clim_coefs.rds"))
 
+# ---- 03 Plot the data ----
 clim_plot <- clim_coefs %>%
   select(rwl, month, varname, coef, significant) %>%
   left_join(metadata, by = "rwl")
@@ -236,7 +249,6 @@ ggplot(site_plot, aes(x = month, y = coef, colour = varname)) +
 # Now with bars
 ggplot(site_plot, aes(x = month, y = coef, fill = varname)) +
   geom_hline(yintercept = 0, colour = "grey40", linewidth = 0.4) +
-
   geom_col(
     position = position_dodge(width = 0.8),
     width = 0.7,

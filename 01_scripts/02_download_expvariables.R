@@ -26,6 +26,9 @@ library(ncdf4)
 options(timeout = 7200)
 
 # ---- Define Europe limits ----*
+# This is helpful to define the general spatial are we will be working on this
+# project but, if you want to work with other spatial areas, you can uptade this
+# accordingly.
 
 europe_extent <- ext(-10, 35, 35, 75)
 ref_raster <- rast(ext(europe_extent),
@@ -35,6 +38,9 @@ ref_raster <- rast(ext(europe_extent),
 # ---- 01 Climate data ----
 
 ## ---- WorldClim ---*
+# WorldClim data is using the package geodata but you can find more information
+# here: https://www.worldclim.org/data/worldclim21.html and you can find more
+
 clim_dir <- file.path("02_data", "02_spatial_data", "01_climate",
                       "01_worldclim")
 dir.create(clim_dir, recursive = TRUE, showWarnings = FALSE)
@@ -43,6 +49,9 @@ bioclim <- worldclim_global(var = "bio", res = 5,
                             path = file.path(clim_dir, "01_climate"))
 
 ## ---- Climatic Grid ----*
+# The climate grids are downloaded from the Climate Researh Unit. Find more
+# information here: https://crudata.uea.ac.uk/cru/data/hrg/cru_ts_4.09/
+
 cgrid_out <- file.path("02_data", "02_spatial_data", "01_climate",
                        "02_climgrid")
 dir.create(cgrid_out, recursive = TRUE, showWarnings = FALSE)
@@ -80,6 +89,8 @@ for (v in vars) {
 }
 
 ## ---- Standardised Precipitation-Evapotranspiration Index ----*
+# The SPEI is downloaded from here: https://spei.csic.es/spei_database
+
 spei_out <- file.path("02_data", "02_spatial_data", "01_climate", "03_spei")
 dir.create(spei_out, recursive = TRUE, showWarnings = FALSE)
 
@@ -90,6 +101,8 @@ download.file("https://spei.csic.es/spei_database/nc/spei06.nc",
 # ---- 02 Diversity ----
 
 ## ---- Animal Diversity ----*
+# The diversity maps were downloaded from here:
+# https://biodiversitymapping.org/ and you can download other maps if you want
 
 bio_dir <- file.path("02_data", "02_spatial_data", "02_diversity",
                      "01_animal_diver")
@@ -114,6 +127,8 @@ file.rename(
 unlink(created_folder, recursive = TRUE)
 
 ## ---- Tree diversity ----*
+# The tree richness map is downloaded from here:
+# https://doi.org/10.6084/m9.figshare.17232491
 tree_dir <- file.path("02_data", "02_spatial_data", "02_diversity",
                       "02_treediver")
 dir.create(tree_dir, recursive = TRUE, showWarnings = FALSE)
@@ -124,6 +139,7 @@ download.file(url = "https://ndownloader.figshare.com/files/35133814",
               mode = "wb", method = "libcurl")
 
 ## ---- Tree speceis code ----*
+# The tree species code is downloaded from the ITRDB 
 tree_out <- file.path("02_data", "01_tree_data")
 dir.create(tree_out, recursive = TRUE, showWarnings = FALSE)
 
@@ -133,7 +149,7 @@ download.file(url = paste0("https://www.ncei.noaa.gov/pub/data/paleo/",
               mode = "wb", method = "libcurl")
 
 # ---- 03 Ecoregions ----
-
+# This data comes from: https://koeppen-geiger.vu-wien.ac.at/present.htm
 eco_dir <- file.path("02_data", "02_spatial_data", "03_ecoregions")
 dir.create(eco_dir, recursive = TRUE, showWarnings = FALSE)
 tmpeco <- tempfile(fileext = ".zip")
@@ -148,6 +164,9 @@ download.file(url = paste0("https://koeppen-geiger.vu-wien.ac.at/Rcode/",
 unzip(tmpeco, exdir = eco_dir)
 
 # ---- 04 Soil Grids ----
+# For the soil grids we use the soilDB package and you should UPDATE the box
+# if you want a different area or a more specific area.
+
 soil_dir <- file.path("02_data", "02_spatial_data", "04_soilgrids")
 dir.create(soil_dir, recursive = TRUE, showWarnings = FALSE)
 

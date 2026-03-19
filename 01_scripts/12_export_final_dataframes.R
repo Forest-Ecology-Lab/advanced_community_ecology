@@ -12,7 +12,8 @@
 # ---- Load libraries ---- *
 
 library(dplyr)
-
+library(terra)
+library(sf)
 ###-------------------------------------------------------------------------- *
 
 europe_extent <- ext(-10, 35, 35, 75)
@@ -34,16 +35,17 @@ coords <- meta %>%
   dplyr::select(longitude, latitude)
 
 # Site level data
-interseries <- read.csv(file.path(derived_out, "mean_interseries.csv"))
+interseries_site <- read.csv(file.path(derived_in, "interseries_site.csv"))
 chron_cv <- read.csv(file.path(derived_in, "chronology_cv.csv"))
 clim_coefs <- readRDS(file.path(derived_in, "clim_coefs.rds"))
 spei_coefs <- readRDS(file.path(derived_in, "spei_coefs.rds")) %>%
-  rename(spei = clim_var,
+  rename(spei = varname,
          window_spei = window,
          spei_coef = coef,
          spei_significant = significant,
          spei_month = month,
-         spei_month_plot = month_plot)
+         spe_ci_lower = ci_lower,
+         spei_ci_upper = ci_upper)
 
 itrdb_chronologies <- read.csv(file.path(derived_out, "rwi_calculations.csv"))
 
@@ -52,6 +54,8 @@ itrdb_resilience <- read.csv(file.path(derived_in, "itrdb_resilience.csv"))
 # Tree level data
 tree_age <- read.csv(file.path(derived_in, "tree_age.csv"))
 bai <- read.csv(file.path(derived_in, "bai_calculations.csv"))
+interseries_tree <- read.csv(file.path(derived_out, "interseries_tree.csv"))
+
 
 # Other variables
 clim_sites <- read.csv(file.path(derived_out, "clim_long.csv"))
@@ -152,7 +156,7 @@ metadata <- meta %>%
 ## Site level metadata
 ### You will have the interseries correlation, the chronology coefficent of 
 ### variation along with the metadata.
-site_growth_data <- list(metadata, interseries, chron_cv) %>%
+site_growth_data <- list(metadata, interseries_site, chron_cv) %>%
   reduce(left_join, by = c("rwl"))
 
 ### You will have the monthly climate correlations (temperature, max temperature,
@@ -193,7 +197,8 @@ site_growth_trend <- itrdb_chronologies %>%
 
 ## You will get the tree growth (BAI) level metadata along with the metadata.
 tree_year_growth <- bai %>%
-  left_join(tree_age, by = c("rwl", "tree"))
+  left_join(tree_age, by = c("rwl", "tree")) %>% 
+  left_join(interseries_tree, by = c("rwl", "tree"))
 
 ## You will get the tree growth trend along with the metadata. MAKE SURE THAT
 ## YOU UPDATE THE TIME WINDOW ACCORDINGLY
@@ -206,7 +211,9 @@ tree_growth_trend <- bai %>%
   summarise(
     growth_slope = coef(lm(bai ~ year))[2],
     .groups = "drop") %>%
-  left_join(metadata, by = "rwl")
+  left_join(metadata, by = "rwl") %>% 
+  left_join(interseries_tree, by = c("rwl", "tree"))
+
 
 ###-------------------------------------------------------------------------- *
 
