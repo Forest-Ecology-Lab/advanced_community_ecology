@@ -14,6 +14,8 @@
 library(dplyr)
 library(terra)
 library(sf)
+library(purrr)
+
 ###-------------------------------------------------------------------------- *
 
 europe_extent <- ext(-10, 35, 35, 75)

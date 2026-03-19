@@ -138,7 +138,7 @@ for (i in seq_along(site_names)) {
         verbose = FALSE)
 
   }, error = function(e) {
-    message("Failed: ", site, " - ", v)
+    message("Failed site: ", site,)
     NULL
   })
   setTxtProgressBar(pb, i)
@@ -212,25 +212,6 @@ ggplot(site_plot, aes(x = month, y = coef, colour = varname)) +
     linewidth = 0.7
   ) +
   geom_point(size = 2.8) +
-  facet_wrap(~ varname) +
-  scale_linetype_manual(
-                        name = "Significant",
-                        values = c("FALSE" = "dashed", "TRUE" = "solid"),
-                        labels = c("FALSE" = "No", "TRUE" = "Yes")) +
-  labs(
-    x = "Months",
-    y = "Coefficients"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-    legend.position = "right"
-  )
-
-# Also plot with bars
-ggplot(site_plot, aes(x = month, y = coef, colour = varname)) +
-  geom_hline(yintercept = 0, colour = "grey50", linewidth = 0.4) +
-  geom_bar() +
   facet_wrap(~ varname) +
   scale_linetype_manual(
                         name = "Significant",
