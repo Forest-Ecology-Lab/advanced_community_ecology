@@ -73,8 +73,6 @@ This installs and loads all required packages using `renv`.
 -   Filter metadata (species, country, years)
 -   Select `.rwl` files
 
-👉 Example:
-
 ------------------------------------------------------------------------
 
 ### 2. Growth metrics
@@ -97,8 +95,6 @@ Script:
 -   Chronology building
 -   Basal Area Increment (BAI)
 
-👉
-
 ------------------------------------------------------------------------
 
 ### 4. Interseries correlation
@@ -106,15 +102,11 @@ Script:
 -   Signal strength across trees
 -   Site-level synchrony
 
-👉
-
 ------------------------------------------------------------------------
 
 ### 5. Chronology variability
 
 -   Coefficient of variation (CV)
-
-👉
 
 ------------------------------------------------------------------------
 
@@ -124,16 +116,12 @@ Script:
 -   SPEI drought index
 -   Spatial extraction per site
 
-👉
-
 ------------------------------------------------------------------------
 
 ### 7. Climate–growth relationships
 
 -   Correlation analysis using `treeclim::dcc()`
 -   Monthly climate sensitivity
-
-👉
 
 ------------------------------------------------------------------------
 
@@ -142,16 +130,12 @@ Script:
 -   Drought–growth relationships
 -   Spatial and temporal patterns
 
-👉
-
 ------------------------------------------------------------------------
 
 ### 9. Pointer years
 
 -   Detection of extreme growth years
 -   Filtering by threshold and period
-
-👉
 
 ------------------------------------------------------------------------
 
@@ -164,8 +148,6 @@ Based on **Lloret et al. (2011)**:
 -   Resilience
 -   Relative resilience
 
-👉
-
 ------------------------------------------------------------------------
 
 ### 11. Final data integration
@@ -173,8 +155,6 @@ Based on **Lloret et al. (2011)**:
 -   Merge all outputs
 -   Add environmental variables (soil, climate, topography)
 -   Generate analysis-ready datasets
-
-👉
 
 ------------------------------------------------------------------------
 
