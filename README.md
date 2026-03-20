@@ -1,6 +1,6 @@
 # Advanced Community Ecology
 
-Repository for **hands-on analysis in community ecology and dendrochronology**, developed for the *Advanced Community Ecology* course at the **Forest Ecology Lab, University of Bern**.
+Repository for **hands-on analysis in community ecology and dendrochronology**, developed for the *Advanced Community Ecology* course at the **University of Bern**.
 
 This repository provides a **fully reproducible pipeline in R** to analyse tree-ring data, climate–growth relationships, and forest resilience.
 
