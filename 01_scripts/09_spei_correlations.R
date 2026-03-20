@@ -74,37 +74,37 @@ spei_results <- list()
 pb <- txtProgressBar(min = 0, max = length(site_names), style = 3)
 
 for (i in seq_along(site_names)) {
-
+  
   # This will get the site that the iteration will be working with
   site <- site_names[i]
-
-    # Extract the chronology from the list previously created and put it in the
-    # correct format.
-    chrono_site <- itrdb_rwi[[site]] %>%
-      select(year, std) %>%
-      as.data.frame() %>%
-      column_to_rownames("year")
-
-    spei_results[[site]] <- tryCatch({
-
+  
+  # Extract the chronology from the list previously created and put it in the
+  # correct format.
+  chrono_site <- itrdb_rwi[[site]] %>%
+    select(year, std) %>%
+    as.data.frame() %>%
+    column_to_rownames("year")
+  
+  spei_results[[site]] <- tryCatch({
+    
     # Extract the SPEI data for that specific site
     spei_site <- spei_l %>%
       filter(rwl == site) %>%
       select(year, month, spei) %>%
       mutate(month = match(month, month.abb)) %>%
       as.data.frame()
-
+    
     # Calculates the corelation of the site SPEI and Chronology
     dcc(
       chrono = chrono_site,
       climate = spei_site,
       selection = -6:9,
       verbose = FALSE)
-
+    
     # This will kick in if there is an error. If there is an error it will
     # give you an error
   }, error = function(e) {
-    message("Failed: ", site, " - ", v)
+    message("Failed: ", site, "\n")
     NULL
   })
   setTxtProgressBar(pb, i)
@@ -134,9 +134,26 @@ spei_coefs <- bind_rows(
 )
 
 # Export the SPEI Coefficients in case you need them later
+derived_out <- file.path("02_data", "03_derived_data")
 
 write.csv(x = spei_l, file = file.path(derived_out, "spei_long.csv"),
-                row.names = FALSE)
+          row.names = FALSE)
+
+spei_coefs <- spei_coefs %>%
+  tibble() %>% 
+  rename(spei_window = window,
+         spei_id = id,
+         spei_var = varname,
+         spei_month = month,
+         spei_coef = coef,
+         spei_significant = significant,
+         spei_ci_lower = ci_lower,
+         spei_ci_upper = ci_upper) %>% 
+  mutate(spei_month = factor(spei_month, levels = c("Jun", "Jul", "Aug", "Sep",
+                                                    "Oct", "Nov", "Dec",
+                                                    "JAN", "FEB", "MAR", "APR",
+                                                    "MAY", "JUN", "JUL", "AUG",
+                                                    "SEP")))
 
 saveRDS(object = spei_coefs,
         file = file.path(derived_in, "spei_coefs.rds"))
@@ -154,8 +171,8 @@ spei_plot <- spei_coefs %>%
 spei_mean_map <- spei_plot %>%
   group_by(rwl, latitude, longitude) %>%
   summarise(
-    mean_coef = mean(coef, na.rm = TRUE),
-    n_months = sum(!is.na(coef)),
+    mean_coef = mean(spei_coef, na.rm = TRUE),
+    n_months = sum(!is.na(spei_coef)),
     .groups = "drop"
   )
 
@@ -198,11 +215,10 @@ overall_mean_map
 
 ## Calculate the strongest month per site
 spei_strongest <- spei_plot %>%
-  filter(clim_var == "spei") %>%
   group_by(rwl) %>%
-  slice_max(order_by = abs(coef), n = 1, with_ties = FALSE) %>%
+  slice_max(order_by = abs(spei_coef), n = 1, with_ties = FALSE) %>%
   ungroup() %>%
-  mutate(cor_sign = ifelse(coef >= 0, "Positive", "Negative"))
+  mutate(cor_sign = ifelse(spei_coef >= 0, "Positive", "Negative"))
 
 ## Set a manual color gradient
 month_cols <- c(
@@ -233,7 +249,7 @@ strongest_month_map <- ggplot() +
     aes(
       x = longitude,
       y = latitude,
-      fill = month_plot,
+      fill = spei_month,
       shape = cor_sign
     ),
     colour = "black",
@@ -291,52 +307,52 @@ spei_map <- ggplot() +
   geom_sf(data = europe_map, fill = "grey95",
           colour = "grey70", linewidth = 0.2) +
   geom_point(
-             data = spei_plot %>% filter(!significant),
-             aes(x = longitude, y = latitude, colour = coef),
-             shape = 1,
-             size = 1.8,
-             alpha = 0.8) +
-
+    data = spei_plot %>% filter(!spei_significant),
+    aes(x = longitude, y = latitude, colour = spei_coef),
+    shape = 1,
+    size = 1.8,
+    alpha = 0.8) +
+  
   geom_point(
-             data = spei_plot %>% filter(significant),
-             aes(x = longitude, y = latitude, colour = coef),
-             shape = 19,
-             size = 2.2,
-             alpha = 0.9) +
-
+    data = spei_plot %>% filter(spei_significant),
+    aes(x = longitude, y = latitude, colour = spei_coef),
+    shape = 19,
+    size = 2.2,
+    alpha = 0.9) +
+  
   scale_colour_gradient2(
-                         low = "brown",
-                         mid = "white",
-                         high = "darkgreen",
-                         midpoint = 0) +
-
+    low = "brown",
+    mid = "white",
+    high = "darkgreen",
+    midpoint = 0) +
+  
   coord_sf(xlim = europe_limits$xlim,
            ylim = europe_limits$ylim,
            expand = FALSE) +
-
-  facet_wrap(~ month_plot, ncol = 4) +
-
+  
+  facet_wrap(~ spei_month, ncol = 4) +
+  
   labs(
-       ## Update the tittle accordingly to your research question!
-       title = "Spatial pattern of SPEI-growth correlations for PISY",
-       subtitle = "Filled points are significant",
-       x = "Longitude",
-       y = "Latitude",
-       colour = "coef") +
-
+    ## Update the tittle accordingly to your research question!
+    title = "Spatial pattern of SPEI-growth correlations for PISY",
+    subtitle = "Filled points are significant",
+    x = "Longitude",
+    y = "Latitude",
+    colour = "coef") +
+  
   theme_minimal() +
   theme(
-        panel.grid = element_blank(),
-        strip.background = element_rect(fill = "grey90", colour = NA),
-        strip.text = element_text(face = "bold"),
-        legend.position = "right")
+    panel.grid = element_blank(),
+    strip.background = element_rect(fill = "grey90", colour = NA),
+    strip.text = element_text(face = "bold"),
+    legend.position = "right")
 
 ## Check it
 spei_map
 
 # -------- 04 Boxplot by Month -------- *
 
-boxplot_month <- ggplot(spei_plot, aes(x = month_plot, y = coef)) +
+boxplot_month <- ggplot(spei_plot, aes(x = spei_month, y = spei_coef)) +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "grey50") +
   geom_boxplot(outlier.alpha = 0.35) +
   theme_bw() +
@@ -357,17 +373,17 @@ boxplot_month
 
 ## Calculate the amount of signigicant sites per month
 sig_sites_month_df <- spei_plot %>%
-  group_by(month_plot) %>%
+  group_by(spei_month) %>%
   summarise(
-    n_sig = sum(significant, na.rm = TRUE),
-    n_total = sum(!is.na(significant)),
+    n_sig = sum(spei_significant, na.rm = TRUE),
+    n_total = sum(!is.na(spei_significant)),
     prop_sig = n_sig / n_total,
     .groups = "drop"
   )
 
 ## Plot it
 sig_sites_month_plot <- ggplot(sig_sites_month_df,
-                               aes(x = month_plot, y = n_sig)) +
+                               aes(x = spei_month, y = n_sig)) +
   geom_col() +
   theme_bw() +
   theme(

@@ -109,36 +109,36 @@ pb <- txtProgressBar(min = 0, max = length(site_names), style = 3)
 
 # Start of the loop
 for (i in seq_along(site_names)) {
-
+  
   # Get the site names
   site <- site_names[i]
-
+  
   # Select the site rwi
   chrono_site <- itrdb_rwi[[site]] %>%
     select(year, std) %>%
     as.data.frame() %>%
     column_to_rownames("year")
-
+  
   # Calculate correlations
   dcc_results[[site]] <- tryCatch({
-
+    
     # Set the climate data in the correct format
     climate_site <- clim_l %>%
       filter(rwl == site) %>%
       select(-rwl) %>%
       mutate(month = match(month, month.abb)) %>%
       as.data.frame()
-
+    
     # Calculate the climate correlations for all variables and save it on the
     # list.
     dcc(
-        chrono = chrono_site,
-        climate = climate_site,
-        selection = -6:9,
-        verbose = FALSE)
-
+      chrono = chrono_site,
+      climate = climate_site,
+      selection = -6:9,
+      verbose = FALSE)
+    
   }, error = function(e) {
-    message("Failed site: ", site,)
+    message("Failed site: ", site)
     NULL
   })
   setTxtProgressBar(pb, i)
@@ -153,11 +153,11 @@ close(pb)
 # Extract the information from the list
 clim_coefs <- bind_rows(
   lapply(names(dcc_results), function(site) {
-
+    
     resp <- dcc_results[[site]]
-
+    
     if (is.null(resp) || is.null(resp$coef)) return(NULL)
-
+    
     resp$coef %>%
       rownames_to_column(var = "window") %>%
       mutate(rwl = site) %>%
@@ -172,12 +172,19 @@ derived_out <- file.path("02_data", "03_derived_data")
 write.csv(x = clim_l, file = file.path(derived_out, "clim_long.csv"),
           row.names = FALSE)
 
+clim_coefs <- clim_coefs %>% 
+  mutate(month = factor(month, levels = c("Jun", "Jul", "Aug", "Sep",
+                                          "Oct", "Nov", "Dec",
+                                          "JAN", "FEB", "MAR", "APR",
+                                          "MAY", "JUN", "JUL", "AUG",
+                                          "SEP")))
+
 saveRDS(object = clim_coefs,
         file = file.path(derived_in, "clim_coefs.rds"))
 
 # ---- 03 Plot the data ----
 clim_plot <- clim_coefs %>%
-  select(rwl, month, varname, coef, significant) %>%
+  select(rwl, month, varname, coef, significant,ci_lower,ci_upper) %>%
   left_join(metadata, by = "rwl")
 
 
@@ -196,7 +203,7 @@ clim_mean <- clim_plot %>%
 plot(dcc_results$swed307)
 
 # You can plot the site correlations as this:
-site_plot <- clim_coefs %>%
+site_plot <- clim_plot %>%
   filter(rwl == "swed315")
 
 # Do the plot with lines
@@ -214,9 +221,9 @@ ggplot(site_plot, aes(x = month, y = coef, colour = varname)) +
   geom_point(size = 2.8) +
   facet_wrap(~ varname) +
   scale_linetype_manual(
-                        name = "Significant",
-                        values = c("FALSE" = "dashed", "TRUE" = "solid"),
-                        labels = c("FALSE" = "No", "TRUE" = "Yes")) +
+    name = "Significant",
+    values = c("FALSE" = "dashed", "TRUE" = "solid"),
+    labels = c("FALSE" = "No", "TRUE" = "Yes")) +
   labs(
     x = "Months",
     y = "Coefficients"
@@ -235,7 +242,7 @@ ggplot(site_plot, aes(x = month, y = coef, fill = varname)) +
     width = 0.7,
     colour = "grey20"
   ) +
-
+  
   geom_errorbar(
     aes(
       ymin = ci_lower,
@@ -247,7 +254,7 @@ ggplot(site_plot, aes(x = month, y = coef, fill = varname)) +
     width = 0.2,
     linewidth = 0.6
   ) +
-
+  
   scale_fill_manual(
     values = c(
       "pre" = "#4575b4",  # blue (precip)
@@ -263,18 +270,18 @@ ggplot(site_plot, aes(x = month, y = coef, fill = varname)) +
       "tmx" = "Max Temp"
     )
   ) +
-
+  
   scale_linetype_manual(
     name = "Significant",
     values = c("FALSE" = "dashed", "TRUE" = "solid"),
     labels = c("FALSE" = "No", "TRUE" = "Yes")
   ) +
-
+  
   labs(
     x = "Months",
     y = "Coefficients"
   ) +
-
+  
   theme_minimal() +
   facet_wrap(~varname) +
   theme(

@@ -40,27 +40,20 @@ coords <- meta %>%
 interseries_site <- read.csv(file.path(derived_in, "interseries_site.csv"))
 chron_cv <- read.csv(file.path(derived_in, "chronology_cv.csv"))
 clim_coefs <- readRDS(file.path(derived_in, "clim_coefs.rds"))
-spei_coefs <- readRDS(file.path(derived_in, "spei_coefs.rds")) %>%
-  rename(spei = varname,
-         window_spei = window,
-         spei_coef = coef,
-         spei_significant = significant,
-         spei_month = month,
-         spe_ci_lower = ci_lower,
-         spei_ci_upper = ci_upper)
+spei_coefs <- readRDS(file.path(derived_in, "spei_coefs.rds"))
 
-itrdb_chronologies <- read.csv(file.path(derived_out, "rwi_calculations.csv"))
+itrdb_chronologies <- read.csv(file.path(derived_in, "rwi_calculations.csv"))
 
 itrdb_resilience <- read.csv(file.path(derived_in, "itrdb_resilience.csv"))
 
 # Tree level data
 tree_age <- read.csv(file.path(derived_in, "tree_age.csv"))
 bai <- read.csv(file.path(derived_in, "bai_calculations.csv"))
-interseries_tree <- read.csv(file.path(derived_out, "interseries_tree.csv"))
+interseries_tree <- read.csv(file.path(derived_in, "interseries_tree.csv"))
 
 
 # Other variables
-clim_sites <- read.csv(file.path(derived_out, "clim_long.csv"))
+clim_sites <- read.csv(file.path(derived_in, "clim_long.csv"))
 spei_sites <- read.csv(file.path(derived_in, "spei_long.csv"))
 
 # You can check which variables you from world clim you want to use here:
@@ -222,6 +215,7 @@ tree_growth_trend <- bai %>%
 # ---- 03 Export them ----
 data_out <- file.path("03_output", "03_dataframes")
 
+# This data frames are at site level
 write.csv(x = site_growth_data,
           file = file.path(data_out, "site_growth_data.csv"),
           row.names = FALSE)
@@ -243,6 +237,8 @@ write.csv(x = site_month_climate,
 write.csv(x = site_growth_trend,
           file = file.path(data_out, "site_growth_trend.csv"),
           row.names = FALSE)
+
+# This data frames are at tree level
 write.csv(x = tree_year_growth,
           file = file.path(data_out, "tree_year_growth.csv"),
           row.names = FALSE)
